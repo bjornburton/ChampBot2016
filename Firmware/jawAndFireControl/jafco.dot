@@ -1,0 +1,11 @@
+digraph callgraph {
+"releaseseq" -> "jawcntl" [style=dotted];
+"PCINT0_vect" -> "fireseq" [style=dotted];
+"PCINT0_vect" -> "releaseseq" [style=dotted];
+"main" -> "igncntl" [style=dotted];
+"main" -> "jawcntl" [style=dotted];
+"main" -> "fuelcntl" [style=dotted];
+"fireseq" -> "fuelcntl" [style=dotted];
+"fireseq" -> "jawcntl" [style=dotted];
+"fireseq" -> "igncntl" [style=dotted];
+}

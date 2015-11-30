@@ -1,0 +1,220 @@
+
+% ************ experimental **************
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{naturalnames}{hyperref}
+
+
+\documentclass[]{article}
+
+%opening
+\title{Champbot Entry 2016 (DRAFT)}
+\author{Bj{\"o}rn, Quentin \& Melinda\\Georgia VT}
+
+
+% don't get so uptight
+\setlength{\hfuzz}{3pc}
+\setlength{\vfuzz}{2pc}
+
+%setcounter{tocdepth}{2}
+
+% text and typefaces
+\usepackage{listings}
+\usepackage{verbatim} %for block comments mostly
+
+\usepackage{fmtcount} % equivalent to \usepackage[super]{nth}
+
+% Euler for math | Palatino for rm | Helvetica for ss | Courier for tt
+\usepackage[utf8]{inputenc} % input charater set is the good one
+%\usepackage{lcmtt} % for my \texttt
+%\renewcommand*\ttdefault{lcmtt}
+
+
+
+  \usepackage{tgbonum} % normal typeface
+  %\usepackage{urw-garamond}
+  %\usepackage[garamond]{mathdesign}
+  %\usepackage{kerkis} % normal typeface
+  %\usepackage[euler-digits,euler-hat-accent]{eulervm}
+
+%usepackage{makeidx}
+\usepackage{textcomp} %for special symbols like degrees, registered & copyright that look good
+\usepackage[T1]{fontenc}
+\normalfont
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{scalefnt}
+
+
+ \usepackage[pdftex,
+ pdfauthor={Bjorn \& Quentin},
+ pdftitle={Statement of Work},
+ pdfsubject={Champbot},
+ pdfkeywords={USV, Boat, Submarine, Remote Control},
+ pdfproducer={LaTeX2e with hyperref},
+ pdfcreator={pdfLaTeX}]{hyperref}
+
+
+%\usepackage{tikz} % drawing package. Must be after "\def\pgfsysdriver{pgfsys-tex4ht.def}"
+%\usetikzlibrary{matrix,arrows}
+
+
+% better tables
+\usepackage{booktabs}
+
+
+\usepackage{graphicx}
+
+\usepackage{array}
+
+
+% ToC tuning
+%usepackage{tocloft}% http://ctan.org/pkg/tocloft
+%setlength{\cftsecnumwidth}{4 em}% Set length of number width in ToC for \section
+%setlength{\cftsubsecnumwidth}{5 em}% Set length of number width in ToC for \subsection
+%\setlength{\cftsubsubsecnumwidth}{6em}% Set length of number width in ToC for \subsubsection
+
+% Bib tuning
+%makeatletter
+%renewcommand\@biblabel[1]{}
+%makeatother
+
+
+\usepackage{url} %sweet!
+\usepackage[defaultlines=3,all=true]{nowidow}
+
+%\usepackage[toc]{glossaries}
+
+%\usepackage[title,titletoc,toc]{appendix}
+%usepackage[titletoc]{appendix}
+
+
+% ******** potentialy useful **********
+%\usepackage[all]{hypcap}
+%microtype makes justification look better, especially with narrow columns. Requires pdflatex. Users of normal latex can get a subset of microtypes features with: pdflatex -output-format=dvi
+%booktabs much nicer rules and spacing in tables.
+%amsmath makes a lot of common math constructs prettier and easier. Check out the good documentation.
+%natbib flexible referencing system.
+%subfigure allows you to create sub-figures optionally labeled with subcaptions preceded by (a), (b), etc. Use the [tight] option for better spacing. You can \ref and \subref labels within subfigures to get links to figure 1a) and a). As instructed by the subfigure documentation I now use subfig instead. Having a recent version of the caption package (which subfig includes) is recommended.
+%url better than putting URLs inside \texttt{...}. Line-wrapping works better and you don't have to escape tildes.
+%textpos allows absolute positioning on a page. Can be useful when press-ganging LaTeX into doing slides or a poster. I sometimes use this to put a DRAFT notice, or publication details in the top margin of a paper.
+%\usepackage{booktabs}
+
+
+
+\includeonly{}
+
+
+\newcommand{\nl}{\newline}
+\def\degc{~\textdegree C}
+\def\degf{~\textdegree F}
+
+
+% \makeindex
+
+% \makeglossaries
+
+% plain TeX level change for blank pages
+
+ %********* NOT FOR EPUB **********
+ \makeatletter % catcode shift of the at symbol from 12 to 11
+ \def\cleardoublepage{\clearpage\if@twoside%
+ \ifodd\c@page\else
+ \vspace*{\fill}
+ \hfill
+ \begin{center}
+ This page intentionally left blank.
+ \end{center}
+ \vspace{\fill}
+ \thispagestyle{empty}
+ \newpage
+ \if@twocolumn\hbox{}\newpage\fi\fi\fi
+ }
+ \makeatother % catcode shift of the at symbol from 11 back to 12
+ %********* NOT FOR EPUB **********
+
+\begin{document}
+\maketitle
+
+\section{Project Summary}
+This project will include the design and construction an ROV, closely resembling Champ.
+This will successfully navigate the course of the Champbot Challenge as well as execute all optional maneuvers.
+The education of ourselves and others will be a large part of this exercise.  
+
+The project will begin with a feature-matrix and a dFMEA (so we don't find ourselves DNF).
+Since fire and blades are involved, a risk-assessment will be completed during development.
+
+\section{Objectives}
+\subsection{Navigation}
+Navigation is non-optional and so has priority and will be implemented and tested first.
+In negotiating the slalom around the five buoys, in the prescribed pattern, it must be reasonably quick.
+Executing this in a reasonable time will better hold the attention of the spectators.
+
+There will be two drive units providing speed and agility through pirouette turning.
+
+
+\subsection{Ignition}
+The target will be ignited using a gas flame from its mouth.
+After all, if Champ will be spewing fire, this is where it should emanate.
+
+It's hoped that the flames will be quite visible to the crowed on the shore.
+The fuel will likely be butane, owing to the low pressure, bright flame and relative safety.
+
+Since this is a wet environment, with submersion, ignition will be electro-thermal rather than arc based.
+
+\subsection{Accuracy}
+Like some of last year's entries, the float should be dropped from Champ's mouth.
+Also like last-years entries, champs neck will be extended to better center into the target.
+The mechanics will be a dropping jaw. This must be executed before ignition so that the mouth is clear. 
+
+
+\subsection{Submersion}
+The Submersion for well over 10 seconds will be be supported.
+The dive and rise should be startlingly quick, and repeatable, to impress the crowd.
+
+Since this is a short-term dive, with no forward motion planned, power, rather than ballast, will be used. Downward-force is through the temporary re-purposing of the main-drive assembly as a rotary dive-plane. The pitch control will probably be through thrust reaction and not require another servo.
+
+\subsection{Spectacle, Technical and Aesthetics}
+Since these all have a point-value equal to the more direct tasks, they will figure heavily into the entire project.
+
+
+\section{Statement of Work}
+There is much to do and many unknowns but the success of this project, in its entirely, is very likely.
+
+The schedule is ordered so that unforeseen delays are unlikely to result in a no-show or disqualification.
+
+\subsection{Schedule}
+\begin{tabular}{ r p{.7\textwidth} }
+ \\ Week 23 & Main drive/dive units complete; sealed and with mounts.
+ \\ Week 26 & Remote control and power systems complete. Firmware functional.
+ \\ Week 29 & Buoyant structure complete, along with motor control
+ \\ Week 30 & Early lake test, finalize firmware and spring-rates 
+ \\ Week 32 & Jaw control added and tested
+ \\ Week 34 & Fire-control hardware and firmware added and tested
+ \\ Week 36 & Skeleton \& Skin complete and installed
+ \\ Week 37 & Final lake test to finalize buoyancy and address and handling issues
+ \\ Week 39 & Corrections will be ongoing until the event
+\end{tabular}
+
+\subsection{Budget}
+Money is always a very limited resource.
+Like many of last years entries, rather than the obvious industrial or hobby parts this project will reuse and re-purpose household appliances and material.
+Simplicity should also keep costs down.
+
+At this time it appears that the cost could be well under \$500.
+
+   
+\subsection{Team Composition and Expertise}
+Bj{\"o}rn is an autodidactic engineer and life-long maker, building his first remote-control device, an optically controlled Automaton, in 1973.  
+Quentin is a brilliant \ordinalnum{1} grade student at Georgia Elementary \& Middle School (GEM), and Bj{\"o}rn's son, who loves electronics and chemistry.
+Melinda is an industrial designer.
+
+
+\section{Facilities}
+All work will be performed within the home.
+Github will be use for both source control and documentation at this location:
+\url{https://github.com/bjornburton/champbot}
+
+
+\end{document}

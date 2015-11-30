@@ -1,0 +1,16 @@
+Key attributes
+
+Can win.
+
+On time development.
+
+Simplicity!
+Part of this is to use rotary dive-planes rather than altering buoyancy
+using tanks. This is simpler since the main thrusters may 
+double as the rotary dive-planes.
+
+Low cost.
+
+Tough - rocks eat props!
+
+Reliable - on a shoe-string we cannot afford redundant systems.

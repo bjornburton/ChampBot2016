@@ -1,0 +1,11 @@
+*.html binary
+*.ods binary
+*.exe binary
+*.tex diff=tex
+*.hex binary
+*.o binary
+*.idx binary
+*.toc binary
+*.scn binary
+*.elf binary
+*.c binary

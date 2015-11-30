@@ -1,0 +1,165 @@
+
+% ************ experimental **************
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{naturalnames}{hyperref}
+
+
+\documentclass[]{article}
+
+%opening
+\title{Jaw and Fire Control Firmware}
+\author{Bj{\"o}rn \& Quentin\\Georgia VT}
+
+
+% don't get so uptight
+\setlength{\hfuzz}{3pc}
+\setlength{\vfuzz}{2pc}
+
+%setcounter{tocdepth}{2}
+
+% text and typefaces
+\usepackage{listings}
+\usepackage{verbatim} %for block comments mostly
+
+\usepackage{fmtcount} % equivalent to \usepackage[super]{nth}
+
+% Euler for math | Palatino for rm | Helvetica for ss | Courier for tt
+\usepackage[utf8]{inputenc} % input charater set is the good one
+%\usepackage{lcmtt} % for my \texttt
+%\renewcommand*\ttdefault{lcmtt}
+
+
+
+  \usepackage{tgbonum} % normal typeface
+  %\usepackage{urw-garamond}
+  %\usepackage[garamond]{mathdesign}
+  %\usepackage{kerkis} % normal typeface
+  %\usepackage[euler-digits,euler-hat-accent]{eulervm}
+
+%usepackage{makeidx}
+\usepackage{textcomp} %for special symbols like degrees, registered & copyright that look good
+\usepackage[T1]{fontenc}
+\normalfont
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{scalefnt}
+
+
+ \usepackage[pdftex,
+ pdfauthor={Bjorn \& Quentin},
+ pdftitle={Jaw and Fire Control Firmware},
+ pdfsubject={Champbot},
+ pdfkeywords={ROV, USV, Boat, Submarine, Remote Control},
+ pdfproducer={LaTeX2e with hyperref},
+ pdfcreator={pdfLaTeX}]{hyperref}
+
+
+%\usepackage{tikz} % drawing package. Must be after "\def\pgfsysdriver{pgfsys-tex4ht.def}"
+%\usetikzlibrary{matrix,arrows}
+
+
+% better tables
+\usepackage{booktabs}
+
+
+\usepackage{graphicx}
+
+\usepackage{array}
+
+
+% ToC tuning
+%usepackage{tocloft}% http://ctan.org/pkg/tocloft
+%setlength{\cftsecnumwidth}{4 em}% Set length of number width in ToC for \section
+%setlength{\cftsubsecnumwidth}{5 em}% Set length of number width in ToC for \subsection
+%\setlength{\cftsubsubsecnumwidth}{6em}% Set length of number width in ToC for \subsubsection
+
+% Bib tuning
+%makeatletter
+%renewcommand\@biblabel[1]{}
+%makeatother
+
+
+\usepackage{url} %sweet!
+\usepackage[defaultlines=3,all=true]{nowidow}
+
+%\usepackage[toc]{glossaries}
+
+%\usepackage[title,titletoc,toc]{appendix}
+%usepackage[titletoc]{appendix}
+
+
+% ******** potentialy useful **********
+%\usepackage[all]{hypcap}
+%microtype makes justification look better, especially with narrow columns. Requires pdflatex. Users of normal latex can get a subset of microtypes features with: pdflatex -output-format=dvi
+%booktabs much nicer rules and spacing in tables.
+%amsmath makes a lot of common math constructs prettier and easier. Check out the good documentation.
+%natbib flexible referencing system.
+%subfigure allows you to create sub-figures optionally labeled with subcaptions preceded by (a), (b), etc. Use the [tight] option for better spacing. You can \ref and \subref labels within subfigures to get links to figure 1a) and a). As instructed by the subfigure documentation I now use subfig instead. Having a recent version of the caption package (which subfig includes) is recommended.
+%url better than putting URLs inside \texttt{...}. Line-wrapping works better and you don't have to escape tildes.
+%textpos allows absolute positioning on a page. Can be useful when press-ganging LaTeX into doing slides or a poster. I sometimes use this to put a DRAFT notice, or publication details in the top margin of a paper.
+%\usepackage{booktabs}
+
+
+
+\includeonly{}
+
+
+\newcommand{\nl}{\newline}
+\def\degc{~\textdegree C}
+\def\degf{~\textdegree F}
+
+
+% \makeindex
+
+% \makeglossaries
+
+% plain TeX level change for blank pages
+
+ %********* NOT FOR EPUB **********
+ \makeatletter % catcode shift of the at symbol from 12 to 11
+ \def\cleardoublepage{\clearpage\if@twoside%
+ \ifodd\c@page\else
+ \vspace*{\fill}
+ \hfill
+ \begin{center}
+ This page intentionally left blank.
+ \end{center}
+ \vspace{\fill}
+ \thispagestyle{empty}
+ \newpage
+ \if@twocolumn\hbox{}\newpage\fi\fi\fi
+ }
+ \makeatother % catcode shift of the at symbol from 11 back to 12
+ %********* NOT FOR EPUB **********
+
+\begin{document}
+\maketitle
+
+\section{Summary}
+This will heat the igniter, delay until hot and open the gas valve for some maximum time.
+
+\section{Heating}
+The heating element is a tungsten head-light bulb.
+It has a higher melting point than constantan or even Nichrome.
+With that, since butane has a low autoignition temperature of 288\degc, the operating window should be very wide.
+The heavy bulb filiment should resist cooling.
+The PWM will need to to keep it a dull yellow for a couple seconds.
+
+\section{Gas}
+Gas will be controlled by it's container's valve, operated with a 12 Volt servo.
+This may be a simple solenoid. 
+Maximum time will be limited to minimize risk and waste.
+
+\section{Jaw}
+Since the mouth needs to be open, mouth control will be here too.
+This will be a door-lock servo.
+A spring will hold it closed and the servo will open it against the spring.  
+
+
+
+
+
+
+\end{document}
