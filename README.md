@@ -1,8 +1,9 @@
 Champ-like ROV, with brief submersion capability, designed to meet the demands of the Champlain Mini Maker Faire's Champbot Challenge of 2016.
 
-Team Name: <Tany>
-Team Members: Father and son, so far
+Team Name: Tanny
 
-This project will be on a very tight budget but the intent is to win!
+Team Members: Father and son
+
+This project will be on a tighter budget that last year!
 
 
