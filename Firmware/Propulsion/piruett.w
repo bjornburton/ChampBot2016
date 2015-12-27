@@ -8,12 +8,17 @@
 \datethis % print date on listing
 
 @* Introduction. This is the firmware portion of the propulsion system for our
-Champbot.
-It features separate thrust and steering as well as piruett turning.
-
+2016 Champbot.
+It features separate thrust and steering, including piruett turning. Also an
+autonomous dive function has been added.
+  
 This will facilitate motion by taking ``thrust'' and ``radius'' pulse-width,
 or PWC, inputs from the Futaba-Kyosho RC receiver and converting them to the
 appropriate motor actions.
+
+Also an autonomous dive function has been added.
+
+
 Thrust is Channel 2, entering analog input A1, and Radius is channel 1, at A0.
 The action will be similar to driving an RC car or boat.
 By keeping it natural, it should be easier to navigate the course than with a
@@ -25,14 +30,14 @@ The non-PWM pin must be held low.
 This is a big problem since PWM outputs have dedicated pins.
 Two AVR timers would be needed to control two motors; waistful.
 
-The odd example in the datasheet has PWM on IN1 and LOW on IN2 for forward.
-For reverse, LOW on IN1 and PWM on IN2.
+The odd example in the DBH-01 datasheet has PWM on IN1 and LOW on IN2 for
+forward. For reverse, LOW on IN1 and PWM on IN2.
 
 Rulling out multiple timers (four comparators), additional outputs, or a PLD,
 the best solution we could find was a adding glue logic.
 A single 74F02 was chosen; a quad NOR.
-Keeping is this simple, one gate-type and one chip, required that the AVR
-outputs be inverted.
+Keeping this solution simple, one gate-type and on one chip, required that the
+AVR outputs be inverted.
 \includegraphics[width=25 pc]{glue.png}a
 This one chip handles the logic for both motors. With this, the AVR outputs
 direction on one pin and PWM on the other.
@@ -718,12 +723,16 @@ To enable this interrupt, set the ACIE bit of register ACSR.
 
 @
 See section 11.8 in the datasheet for details on the Watchdog Timer.
-This is in the ``Interrupt Mode''.
+This is in the ``Interrupt Mode''. When controlled remotlely or in an
+autonomous dive this should not time-out.
+It needs to be long enough to allow for the 0.25 ms autonomous dive loop.
+
 @ @<Initialize watchdog timer...@>=
 {
 
  WDTCSR |= (1<<WDCE) | (1<<WDE);
- WDTCSR = (1<<WDIE) | (1<<WDP2); // reset after about 0.25 seconds
+ WDTCSR = (1<<WDIE) | (1<<WDP2) | (1<<WDP0);
+                             // reset after about 0.5 seconds (see 11.9.2)
 }
 
 @
