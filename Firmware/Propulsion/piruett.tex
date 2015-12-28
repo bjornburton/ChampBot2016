@@ -11,12 +11,17 @@
 
 \N{1}{1}Introduction. This is the firmware portion of the propulsion system for
 our
-Champbot.
-It features separate thrust and steering as well as piruett turning.
+2016 Champbot.
+It features separate thrust and steering, including piruett turning. Also an
+autonomous dive function has been added.
 
 This will facilitate motion by taking ``thrust'' and ``radius'' pulse-width,
 or PWC, inputs from the Futaba-Kyosho RC receiver and converting them to the
 appropriate motor actions.
+
+Also an autonomous dive function has been added.
+
+
 Thrust is Channel 2, entering analog input A1, and Radius is channel 1, at A0.
 The action will be similar to driving an RC car or boat.
 By keeping it natural, it should be easier to navigate the course than with a
@@ -28,14 +33,14 @@ The non-PWM pin must be held low.
 This is a big problem since PWM outputs have dedicated pins.
 Two AVR timers would be needed to control two motors; waistful.
 
-The odd example in the datasheet has PWM on IN1 and LOW on IN2 for forward.
-For reverse, LOW on IN1 and PWM on IN2.
+The odd example in the DBH-01 datasheet has PWM on IN1 and LOW on IN2 for
+forward. For reverse, LOW on IN1 and PWM on IN2.
 
 Rulling out multiple timers (four comparators), additional outputs, or a PLD,
 the best solution we could find was a adding glue logic.
 A single 74F02 was chosen; a quad NOR.
-Keeping is this simple, one gate-type and one chip, required that the AVR
-outputs be inverted.
+Keeping this solution simple, one gate-type and on one chip, required that the
+AVR outputs be inverted.
 \includegraphics[width=25 pc]{glue.png}a
 This one chip handles the logic for both motors. With this, the AVR outputs
 direction on one pin and PWM on the other.
@@ -231,9 +236,9 @@ $\{{}$\Y\par
 The Futaba receiver leads with channel two, rising edge, so we will start
 looking for that by setting \PB{\.{"edge"}} to look for a rise on channel 2.
 
-Center position of the controller results in a count of about 21250,
-hard left, or up, with trim reports about 29100 and hard right, or down,
-with trim reports about 13400.
+Center position of the controller results in a count of about 21250, hard
+larboard, or forward, with trim reports about 29100 and hard starboard, or
+reverse, with trim reports about 13400.
 
 About 4/5ths of that range are the full swing of the stick, without trim.
 This is from about 14970 and 27530 ticks.
@@ -387,7 +392,7 @@ from the Input Capture Unit.
 With the levers centered the durations should be about 1500~$\mu$s so at
 16~Mhz the count should be near 24000.
 The range should be 17600 to 30400 for 12800 counts, well within the range
-of the 64 kib of the 16 bit register..
+of the $2^{16}$ counts of the 16 bit register.
 
 
 \Y\B\&{void} \\{pwcCalc}(\&{inputStruct} ${}{*}\\{input\_s}{}$)\1\1\7
@@ -739,14 +744,17 @@ ${}\.{ADMUX}\MRL{\AND{\K}}\CM((\T{1}\LL\.{MUX2})\OR(\T{1}\LL\.{MUX1})\OR(\T{1}%
 
 \M{49}
 See section 11.8 in the datasheet for details on the Watchdog Timer.
-This is in the ``Interrupt Mode''.
+This is in the ``Interrupt Mode''. When controlled remotlely or in an
+autonomous dive this should not time-out.
+It needs to be long enough to allow for the 0.25 ms autonomous dive loop.
+
 \fi
 
 \M{50}\B\X50:Initialize watchdog timer\X${}\E{}$\6
 ${}\{{}$\1\6
 ${}\.{WDTCSR}\MRL{{\OR}{\K}}(\T{1}\LL\.{WDCE})\OR(\T{1}\LL\.{WDE});{}$\6
-${}\.{WDTCSR}\K(\T{1}\LL\.{WDIE})\OR(\T{1}\LL\.{WDP2}){}$;\SHC{ reset after
-about 0.25 seconds }\6
+${}\.{WDTCSR}\K(\T{1}\LL\.{WDIE})\OR(\T{1}\LL\.{WDP2})\OR(\T{1}\LL\.{WDP0}){}$;%
+\SHC{ reset after about 0.5 seconds (see 11.9.2) }\6
 \4${}\}{}$\2\par
 \U13.\fi
 
@@ -754,8 +762,7 @@ about 0.25 seconds }\6
 PWM setup isn't too scary.
 Timer Count 0 is configured for ``Phase Correct'' PWM which, according to the
 datasheet, is preferred for motor control.
-OC0A (port) and OC0B (starboard) are set to clear on a match which creates a
-non-inverting PWM.
+OC0A (port) and OC0B (starboard) are used for PWM.
 The prescaler is set to clk/8 and with a 16 MHz clock the $f$ is about 3922 Hz.
 We are using \PB{\.{"Set"}} on comparator match to invert the PWM, suiting the
 glue-logic  which drives the H-Bridge.

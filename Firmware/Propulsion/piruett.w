@@ -207,9 +207,9 @@ int main(void)
 The Futaba receiver leads with channel two, rising edge, so we will start
 looking for that by setting |"edge"| to look for a rise on channel 2.
 
-Center position of the controller results in a count of about 21250,
-hard left, or up, with trim reports about 29100 and hard right, or down,
- with trim reports about 13400.
+Center position of the controller results in a count of about 21250, hard
+larboard, or forward, with trim reports about 29100 and hard starboard, or
+reverse, with trim reports about 13400.
 
 About 4/5ths of that range are the full swing of the stick, without trim.
 This is from about 14970 and 27530 ticks.
@@ -383,7 +383,7 @@ from the Input Capture Unit.
 With the levers centered the durations should be about 1500~$\mu$s so at
 16~Mhz the count should be near 24000.
 The range should be 17600 to 30400 for 12800 counts, well within the range
-of the 64 kib of the 16 bit register..
+of the $2^{16}$ counts of the 16 bit register.
 
 
 @c
@@ -739,8 +739,7 @@ It needs to be long enough to allow for the 0.25 ms autonomous dive loop.
 PWM setup isn't too scary.
 Timer Count 0 is configured for ``Phase Correct'' PWM which, according to the
 datasheet, is preferred for motor control.
-OC0A (port) and OC0B (starboard) are set to clear on a match which creates a
-non-inverting PWM.
+OC0A (port) and OC0B (starboard) are used for PWM.
 The prescaler is set to clk/8 and with a 16 MHz clock the $f$ is about 3922 Hz.
 We are using |"Set"| on comparator match to invert the PWM, suiting the
 glue-logic  which drives the H-Bridge.
