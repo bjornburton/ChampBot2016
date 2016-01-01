@@ -180,6 +180,7 @@ void relayCntl(int8_t state);
 void ledCntl(int8_t state);
 void larboardDirection(int8_t state);
 void starboardDirection(int8_t state);
+void diveTick(inputStruct *);
 void pwcCalc(inputStruct *);
 void edgeSelect(inputStruct *);
 void translate(transStruct *);
@@ -368,6 +369,17 @@ ISR (TIMER1_CAPT_vect)
 @#}@#
 
 @
+Here is the ISR that fires at at about 32 Hz for the main dive tick.
+This is used for the PI controll loop.
+@c
+
+ISR (TIMER2_COMPA_vect)
+@#{@#
+ handleIrq = &diveTick;
+@#}@#
+
+
+@
 When the watchdog timer expires, this vector is called.
 This is what happens if the remote's transmitter signal is not received.
 It calls a variant of |pwcCalc| that only flips the |lostSignal| flag.
@@ -431,6 +443,24 @@ void lostSignal(inputStruct *input_s)
 
  edgeSelect(input_s);
 @#}@#
+
+@
+This procedure  will count off ticks for a 0.25 second event.
+Since capture events are guaranteed to have a >1 ms period, or 16000 clock
+cycles, there should be no lost PWC edges.
+
+@c
+void diveTick(inputStruct *input_s)
+@#{@#
+static uint8_t tickCount = 0;
+
+if (!(++tickCount & ~0x80)) // every 128 ticks
+    {
+
+    }
+
+@#}@#
+
 
 @
 

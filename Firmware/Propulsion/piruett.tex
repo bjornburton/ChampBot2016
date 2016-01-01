@@ -207,6 +207,7 @@ ${}\}{}$ \&{transStruct};\par
 \&{void} \\{ledCntl}(\\{int8\_t}\\{state});\6
 \&{void} \\{larboardDirection}(\\{int8\_t}\\{state});\6
 \&{void} \\{starboardDirection}(\\{int8\_t}\\{state});\6
+\&{void} \\{diveTick}(\&{inputStruct} ${}{*});{}$\6
 \&{void} \\{pwcCalc}(\&{inputStruct} ${}{*});{}$\6
 \&{void} \\{edgeSelect}(\&{inputStruct} ${}{*});{}$\6
 \&{void} \\{translate}(\&{transStruct} ${}{*});{}$\6
@@ -266,8 +267,8 @@ $,$ $.$ $\\{maxOut}\K\T{255}$ $,$ $.$ $\\{deadBand}\K\T{10}$ $\}$  ;\par
 \M{13}
 Here the interrupts are disabled so that configuring them doesn't set it off.
 \Y\B\\{cli}(\,);\7
-\X48:Initialize the inputs and capture mode\X\X45:Initialize pin outputs\X%
-\X52:Initialize watchdog timer\X\Y\par
+\X50:Initialize the inputs and capture mode\X\X47:Initialize pin outputs\X%
+\X54:Initialize watchdog timer\X\Y\par
 \fi
 
 \M{14}
@@ -280,7 +281,7 @@ is set; usually done through calling \PB{\.{"sei()"}}.
 
 The PWM is used to control larboard and starboard motors through OC0A (D5) and
 OC0B (D6), respectivly.
-\Y\B\X54:Initialize the Timer Counter 0 for PWM\X\par
+\Y\B\X56:Initialize the Timer Counter 0 for PWM\X\par
 \fi
 
 \M{16}
@@ -295,7 +296,7 @@ wake it up.
 It's important to note that an ISR procedure must be defined to allow the
 program to step past the sleep statement, even if it is empty.
 This stumped me for a good while.
-\Y\B\X46:Configure to idle on sleep\X\7
+\Y\B\X48:Configure to idle on sleep\X\7
 \\{ledCntl}(\.{OFF});\par
 \fi
 
@@ -376,6 +377,15 @@ ${}\\{handleIrq}\K{\AND}\\{pwcCalc}{}$;\7
 \fi
 
 \M{24}
+Here is the ISR that fires at at about 32 Hz for the main dive tick.
+This is used for the PI controll loop.
+\Y\B\.{ISR}(\\{TIMER2\_COMPA\_vect})\7
+${}\{{}$\1\7
+${}\\{handleIrq}\K{\AND}\\{diveTick}{}$;\7
+\4${}\}{}$\2\Y\par
+\fi
+
+\M{25}
 When the watchdog timer expires, this vector is called.
 This is what happens if the remote's transmitter signal is not received.
 It calls a variant of \PB{\\{pwcCalc}} that only flips the \PB{\\{lostSignal}}
@@ -386,7 +396,7 @@ ${}\\{handleIrq}\K{\AND}\\{lostSignal}{}$;\7
 \4${}\}{}$\2\Y\par
 \fi
 
-\M{25}
+\M{26}
 This procedure computes the durations from the PWC signal edge capture values
 from the Input Capture Unit.
 With the levers centered the durations should be about 1500~$\mu$s so at
@@ -399,7 +409,7 @@ of the $2^{16}$ counts of the 16 bit register.
 $\{{}$\Y\par
 \fi
 
-\M{26}
+\M{27}
 On the falling edges we can compute the durations using modulus subtraction
 and then set the edge index for the next edge.
 Channel 2 leads so that rise is first.
@@ -430,7 +440,7 @@ ${}\\{input\_s}\MG\\{lostSignal}\K\.{FALSE};{}$\6
 $\}{}$\Y\par
 \fi
 
-\M{27}
+\M{28}
 This procedure sets output to zero in the event of a lost signal.
 \Y\B\&{void} \\{lostSignal}(\&{inputStruct} ${}{*}\\{input\_s}{}$)\7
 ${}\{{}$\1\7
@@ -440,7 +450,20 @@ ${}\\{input\_s}\MG\\{edge}\K\.{CH2RISE};{}$\6
 \4${}\}{}$\2\Y\par
 \fi
 
-\M{28}
+\M{29}
+This procedure  will count off ticks for a 0.25 second event.
+Since capture events are guaranteed to have a >1 ms period, or 16000 clock
+cycles, there should be no lost PWC edges.
+
+\Y\B\&{void} \\{diveTick}(\&{inputStruct} ${}{*}\\{input\_s}{}$)\7
+${}\{{}$\1\7
+\&{static} \\{uint8\_t}\\{tickCount}${}\K\T{0};{}$\7
+\&{if} ${}(\R(\PP\\{tickCount}\AND\CM\T{\^80}){}$)\SHC{ every 128 ticks }\6
+${}\{\,\}{}$\7
+\4${}\}{}$\2\Y\par
+\fi
+
+\M{30}
 
 The procedure edgeSelect configures the \PB{\.{"Input\ Capture"}} unit to
 capture on
@@ -466,18 +489,18 @@ ${}\.{TCCR1B}\MRL{\AND{\K}}\CM(\T{1}\LL\.{ICES1}){}$;\C{ Falling edge (23.3.2)
 \4${}\}{}$\2\par
 \fi
 
-\M{29}
+\M{31}
 Since the edge has been changed, the Input Capture Flag should be cleared.
 It seems odd but clearing it involves writing a one to it.
 \Y\B$\.{TIFR1}\MRL{{\OR}{\K}}(\T{1}\LL\.{ICF1}){}$;\C{ (per 16.6.3) }\7
 $\}{}$\Y\par
 \fi
 
-\M{30}
+\M{32}
 
 \fi
 
-\M{31}
+\M{33}
 The scaler function takes an input, in time, from the Input Capture
 Register and returns a value scaled by the parameters in structure
 \PB{\.{"inputScale\_s"}}.
@@ -487,7 +510,7 @@ $\{{}$\7
 \\{uint16\_t}\\{solution};\par
 \fi
 
-\M{32}
+\M{34}
 First, we can solve for the obvious cases.
 One is where there is no signal; when \PB{\.{"lostSignal"}} is \PB{\.{"TRUE"}}.
 The other is where the input exceeds the range.
@@ -500,7 +523,7 @@ This can easily happen if the trim is shifted.
 \&{return} \\{trans\_s}${}\MG\\{minOut}{}$;\2\par
 \fi
 
-\M{33}
+\M{35}
 If it's not that simple, then compute the gain and offset and then continue in
 the usual way.
 This is not really an efficient method, recomputing gain and offset every time
@@ -524,7 +547,7 @@ ${}\\{solution}\K(\\{ampFact}*(\\{int32\_t})\\{input}/\\{gain})-\\{offset};{}$\6
 $\}{}$\Y\par
 \fi
 
-\M{34}
+\M{36}
 We need a way to translate \PB{\.{"thrust"}} and \PB{\.{"radius"}} in order to
 carve a
 \PB{\.{"turn"}}. This procedure should do this but it's not going to be perfect
@@ -556,7 +579,7 @@ close }\6
 \&{const} \\{int16\_t}\\{ampFact}${}\K\T{128}{}$;\par
 \fi
 
-\M{35}
+\M{37}
 Here we convert desired radius to thrust-difference by scaling to speed.
 Then that difference is converted to rotation by scaling it with \PB{%
 \.{"track"}}.
@@ -568,7 +591,7 @@ ${}\\{rotation}\K(\\{trans\_s}\MG\\{track}*((\\{ampFact}*\\{difference})/%
 ${}\\{piruett}\K\\{trans\_s}\MG\\{radius}{}$;\par
 \fi
 
-\M{36}
+\M{38}
 Any rotation involves one motor turning faster than the other.
 At some point, faster is not possible and so the leading motor's thrust is
 clipped.
@@ -592,7 +615,7 @@ ${}\\{trans\_s}\MG\\{larboardOut}\K\\{int16clamp}(\\{piruett},\39{-}\\{max},\39%
 \\{max}){}$;\par
 \fi
 
-\M{37}
+\M{39}
 For starboard, piruett is reversed, making it rotate counter to larboard.
 \Y\B$\\{piruett}\K{-}\\{piruett};{}$\6
 ${}\\{trans\_s}\MG\\{starboardOut}\K\\{int16clamp}(\\{piruett},\39{-}\\{max},%
@@ -600,7 +623,7 @@ ${}\\{trans\_s}\MG\\{starboardOut}\K\\{int16clamp}(\\{piruett},\39{-}\\{max},%
 $\}{}$\Y\par
 \fi
 
-\M{38}
+\M{40}
 This procedure sets the signal to the H-Bridge.
 For the PWM we load the value into the unsigned registers.
 \Y\B\&{void} \\{setPwm}(\&{transStruct} ${}{*}\\{trans\_s}{}$)\1\1\7
@@ -627,7 +650,7 @@ ${}\.{OCR0B}\K\\{abs}(\\{trans\_s}\MG\\{starboardOut});{}$\6
 \4${}\}{}$\2\par
 \fi
 
-\M{39}
+\M{41}
 We must see if the fail-safe relay needs to be closed.
 \Y\B\&{if} ${}(\\{trans\_s}\MG\\{larboardOut}\V\\{trans\_s}\MG%
 \\{starboardOut}){}$\1\5
@@ -637,7 +660,7 @@ We must see if the fail-safe relay needs to be closed.
 $\}{}$\Y\par
 \fi
 
-\M{40}
+\M{42}
 Here is a simple procedure to flip the LED on or off.
 \Y\B\&{void} \\{ledCntl}(\\{int8\_t}\\{state})\7
 ${}\{{}$\1\7
@@ -646,7 +669,7 @@ ${}\.{PORTB}\K\\{state}\?\.{PORTB}\OR(\T{1}\LL\.{PORTB5}):\.{PORTB}\AND\CM(%
 \4${}\}{}$\2\Y\par
 \fi
 
-\M{41}
+\M{43}
 Here is a simple procedure to flip the Relay Closed or Open from pin \#8.
 \Y\B\&{void} \\{relayCntl}(\\{int8\_t}\\{state})\7
 ${}\{{}$\1\7
@@ -655,7 +678,7 @@ ${}\.{PORTB}\K\\{state}\?\.{PORTB}\OR(\T{1}\LL\.{PORTB0}):\.{PORTB}\AND\CM(%
 \4${}\}{}$\2\Y\par
 \fi
 
-\M{42}
+\M{44}
 Here is a simple procedure to set thrust direction on the larboard motor.
 \Y\B\&{void} \\{larboardDirection}(\\{int8\_t}\\{state})\7
 ${}\{{}$\1\7
@@ -666,7 +689,7 @@ ${}\.{PORTD}\MRL{{\OR}{\K}}(\T{1}\LL\.{PORTD3}){}$;\2\7
 \4${}\}{}$\2\Y\par
 \fi
 
-\M{43}
+\M{45}
 Here is a simple procedure to set thrust direction on the starboard motor.
 \Y\B\&{void} \\{starboardDirection}(\\{int8\_t}\\{state})\7
 ${}\{{}$\1\7
@@ -677,7 +700,7 @@ ${}\.{PORTD}\MRL{{\OR}{\K}}(\T{1}\LL\.{PORTD4}){}$;\2\7
 \4${}\}{}$\2\Y\par
 \fi
 
-\M{44}
+\M{46}
 A simple 16 bit clamp function.
 \Y\B$\\{int16\_t}\\{int16clamp}(\\{int16\_t}\\{value},\39\\{int16\_t}\\{min},%
 \39\\{int16\_t}\\{max}{}$)\7
@@ -687,7 +710,7 @@ ${}\{{}$\1\7
 \4${}\}{}$\2\Y\par
 \fi
 
-\M{45}\B\X45:Initialize pin outputs\X${}\E{}$\SHC{ set the led port direction;
+\M{47}\B\X47:Initialize pin outputs\X${}\E{}$\SHC{ set the led port direction;
 This is pin \#17 }\6
 $\.{DDRB}\MRL{{\OR}{\K}}(\T{1}\LL\.{DDB5}){}$;\SHC{ set the relay port
 direction; This is pin \#8 }\6
@@ -700,18 +723,18 @@ ${}\.{DDRD}\MRL{{\OR}{\K}}((\T{1}\LL\.{DDD3})\OR(\T{1}\LL\.{DDD4})){}$;\SHC{
 Data direction to output (sec 14.3.3) }\par
 \U13.\fi
 
-\M{46}\B\X46:Configure to idle on sleep\X${}\E{}$\6
+\M{48}\B\X48:Configure to idle on sleep\X${}\E{}$\6
 ${}\{{}$\1\6
 ${}\.{SMCR}\MRL{\AND{\K}}\CM((\T{1}\LL\.{SM2})\OR(\T{1}\LL\.{SM1})\OR(\T{1}\LL%
 \.{SM0}));{}$\6
 \4${}\}{}$\2\par
 \U16.\fi
 
-\M{47}
+\M{49}
 To enable this interrupt, set the ACIE bit of register ACSR.
 \fi
 
-\M{48}\B\X48:Initialize the inputs and capture mode\X${}\E{}$\6
+\M{50}\B\X50:Initialize the inputs and capture mode\X${}\E{}$\6
 ${}\{{}$\SHC{ ADCSRA – ADC Control and Status Register A }\1\6
 ${}\.{ADCSRA}\MRL{\AND{\K}}\CM(\T{1}\LL\.{ADEN}){}$;\SHC{ Conn the MUX to (-)
 input of comparator (sec 23.2) }\SHC{ 23.3.1 ADCSRB – ADC Control and Status
@@ -742,7 +765,7 @@ ${}\.{ADMUX}\MRL{\AND{\K}}\CM((\T{1}\LL\.{MUX2})\OR(\T{1}\LL\.{MUX1})\OR(\T{1}%
 \4${}\}{}$\2\par
 \U13.\fi
 
-\M{49}
+\M{51}
 For a timer tick at each 1/4 second. We will use timer counter 2, our last
 timer.
 It only has an 8 bit prescaler so it will be too fast and will need to be
@@ -763,7 +786,7 @@ The test would be !(tickCount \& ~0x80).
 
 \fi
 
-\M{50}\B\X50:Initialize Tick timer\X${}\E{}$\6
+\M{52}\B\X52:Initialize tick timer\X${}\E{}$\6
 ${}\{{}$\1\6
 ${}\.{TCCR2B}\MRL{{\OR}{\K}}(\T{1}\LL\.{CS22})\OR(\T{1}\LL\.{CS21})\OR(\T{1}\LL%
 \.{CS20}){}$;\SHC{ maximum prescale (see 18.11.2) }\6
@@ -775,7 +798,7 @@ compare match }\6
 \4${}\}{}$\2\par
 \fi
 
-\M{51}
+\M{53}
 See section 11.8 in the datasheet for details on the Watchdog Timer.
 This is in the ``Interrupt Mode''. When controlled remotlely or in an
 autonomous dive this should not time-out.
@@ -783,7 +806,7 @@ It needs to be long enough to allow for the 0.25 ms autonomous dive loop.
 
 \fi
 
-\M{52}\B\X52:Initialize watchdog timer\X${}\E{}$\6
+\M{54}\B\X54:Initialize watchdog timer\X${}\E{}$\6
 ${}\{{}$\1\6
 ${}\.{WDTCSR}\MRL{{\OR}{\K}}(\T{1}\LL\.{WDCE})\OR(\T{1}\LL\.{WDE});{}$\6
 ${}\.{WDTCSR}\K(\T{1}\LL\.{WDIE})\OR(\T{1}\LL\.{WDP2})\OR(\T{1}\LL\.{WDP0}){}$;%
@@ -791,7 +814,7 @@ ${}\.{WDTCSR}\K(\T{1}\LL\.{WDIE})\OR(\T{1}\LL\.{WDP2})\OR(\T{1}\LL\.{WDP0}){}$;%
 \4${}\}{}$\2\par
 \U13.\fi
 
-\M{53}
+\M{55}
 PWM setup isn't too scary.
 Timer Count 0 is configured for ``Phase Correct'' PWM which, according to the
 datasheet, is preferred for motor control.
@@ -801,7 +824,7 @@ We are using \PB{\.{"Set"}} on comparator match to invert the PWM, suiting the
 glue-logic  which drives the H-Bridge.
 \fi
 
-\M{54}\B\X54:Initialize the Timer Counter 0 for PWM\X${}\E{}$\6
+\M{56}\B\X56:Initialize the Timer Counter 0 for PWM\X${}\E{}$\6
 ${}\{{}$\SHC{ 15.9.1 TCCR0A – Timer/Counter Control Register A }\1\6
 ${}\.{TCCR0A}\MRL{{\OR}{\K}}(\T{1}\LL\.{WGM00}){}$;\SHC{ Phase correct, mode 1
 of PWM (table 15-9) }\6
