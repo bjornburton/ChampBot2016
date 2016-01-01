@@ -59,6 +59,7 @@ $(GRAPH): $(DOTSRC)
 $(DOTSRC): $(EGYPTSRC)
 	$(EGYPT) $(EGYPTSRC) |\
         awk '{gsub(/__vector_10/,"TIMER1_CAPT_vect");print}' |\
+        awk '{gsub(/__vector_7/,"TIMER2_COMPA_vect");print}' |\
         awk '{gsub(/__vector_6/,"WDT_vect");print}' > $(DOTSRC)
 
 $(EGYPTSRC): $(OBJECTS)
