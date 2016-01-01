@@ -248,6 +248,7 @@ Here the interrupts are disabled so that configuring them doesn't set it off.
  cli();
 @#
 @<Initialize the inputs and capture mode...@>
+@<Initialize tick timer...@>
 @<Initialize pin outputs...@>
 @<Initialize watchdog timer...@>
 @#

@@ -267,8 +267,8 @@ $,$ $.$ $\\{maxOut}\K\T{255}$ $,$ $.$ $\\{deadBand}\K\T{10}$ $\}$  ;\par
 \M{13}
 Here the interrupts are disabled so that configuring them doesn't set it off.
 \Y\B\\{cli}(\,);\7
-\X50:Initialize the inputs and capture mode\X\X47:Initialize pin outputs\X%
-\X54:Initialize watchdog timer\X\Y\par
+\X50:Initialize the inputs and capture mode\X\X52:Initialize tick timer\X%
+\X47:Initialize pin outputs\X\X54:Initialize watchdog timer\X\Y\par
 \fi
 
 \M{14}
@@ -796,7 +796,7 @@ ${}\.{OCR2A}\K\T{\^f3}{}$;\SHC{ Do I need to make this clearer? }\6
 ${}\.{TIMSK2}\MRL{{\OR}{\K}}(\T{1}\LL\.{OCIE2A}){}$;\SHC{ Interrupt on a
 compare match }\6
 \4${}\}{}$\2\par
-\fi
+\U13.\fi
 
 \M{53}
 See section 11.8 in the datasheet for details on the Watchdog Timer.
