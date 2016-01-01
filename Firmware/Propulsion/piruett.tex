@@ -267,7 +267,7 @@ $,$ $.$ $\\{maxOut}\K\T{255}$ $,$ $.$ $\\{deadBand}\K\T{10}$ $\}$  ;\par
 Here the interrupts are disabled so that configuring them doesn't set it off.
 \Y\B\\{cli}(\,);\7
 \X48:Initialize the inputs and capture mode\X\X45:Initialize pin outputs\X%
-\X50:Initialize watchdog timer\X\Y\par
+\X52:Initialize watchdog timer\X\Y\par
 \fi
 
 \M{14}
@@ -280,7 +280,7 @@ is set; usually done through calling \PB{\.{"sei()"}}.
 
 The PWM is used to control larboard and starboard motors through OC0A (D5) and
 OC0B (D6), respectivly.
-\Y\B\X52:Initialize the Timer Counter 0 for PWM\X\par
+\Y\B\X54:Initialize the Timer Counter 0 for PWM\X\par
 \fi
 
 \M{16}
@@ -743,6 +743,39 @@ ${}\.{ADMUX}\MRL{\AND{\K}}\CM((\T{1}\LL\.{MUX2})\OR(\T{1}\LL\.{MUX1})\OR(\T{1}%
 \U13.\fi
 
 \M{49}
+For a timer tick at each 1/4 second. We will use timer counter 2, our last
+timer.
+It only has an 8 bit prescaler so it will be too fast and will need to be
+divided.
+The prescaler is set to the maximum of 1024.
+The timer is set to CTC mode so that the time loop is trimable.
+That will be pretty fast so we need more division in software.
+We want to divide by a power of two for efficiency and so 0x80 (0d128) is as
+small as we can go. This is also half a uint8\_t so the math works out very
+well.
+The time is trimmed to make 128 passes about 0.25 seconds by loading compare
+register, OCR2A, with 0xf3 (0d243).
+The interrupt is enabled TIMSK2 for output compare register A.
+With all that we will have interrupt TIMER2 COMPA fire every 31 ms.
+For the software division we will increment an uint8\_t in the handler on each
+pass and do something at both 0x00 and 0x80 (0d128).
+The test would be !(tickCount \& ~0x80).
+
+\fi
+
+\M{50}\B\X50:Initialize Tick timer\X${}\E{}$\6
+${}\{{}$\1\6
+${}\.{TCCR2B}\MRL{{\OR}{\K}}(\T{1}\LL\.{CS22})\OR(\T{1}\LL\.{CS21})\OR(\T{1}\LL%
+\.{CS20}){}$;\SHC{ maximum prescale (see 18.11.2) }\6
+${}\.{TCCR2A}\MRL{{\OR}{\K}}(\T{1}\LL\.{WGM21}){}$;\SHC{ CTC mode (see 18.11.1)
+}\6
+${}\.{OCR2A}\K\T{\^f3}{}$;\SHC{ Do I need to make this clearer? }\6
+${}\.{TIMSK2}\MRL{{\OR}{\K}}(\T{1}\LL\.{OCIE2A}){}$;\SHC{ Interrupt on a
+compare match }\6
+\4${}\}{}$\2\par
+\fi
+
+\M{51}
 See section 11.8 in the datasheet for details on the Watchdog Timer.
 This is in the ``Interrupt Mode''. When controlled remotlely or in an
 autonomous dive this should not time-out.
@@ -750,7 +783,7 @@ It needs to be long enough to allow for the 0.25 ms autonomous dive loop.
 
 \fi
 
-\M{50}\B\X50:Initialize watchdog timer\X${}\E{}$\6
+\M{52}\B\X52:Initialize watchdog timer\X${}\E{}$\6
 ${}\{{}$\1\6
 ${}\.{WDTCSR}\MRL{{\OR}{\K}}(\T{1}\LL\.{WDCE})\OR(\T{1}\LL\.{WDE});{}$\6
 ${}\.{WDTCSR}\K(\T{1}\LL\.{WDIE})\OR(\T{1}\LL\.{WDP2})\OR(\T{1}\LL\.{WDP0}){}$;%
@@ -758,7 +791,7 @@ ${}\.{WDTCSR}\K(\T{1}\LL\.{WDIE})\OR(\T{1}\LL\.{WDP2})\OR(\T{1}\LL\.{WDP0}){}$;%
 \4${}\}{}$\2\par
 \U13.\fi
 
-\M{51}
+\M{53}
 PWM setup isn't too scary.
 Timer Count 0 is configured for ``Phase Correct'' PWM which, according to the
 datasheet, is preferred for motor control.
@@ -768,7 +801,7 @@ We are using \PB{\.{"Set"}} on comparator match to invert the PWM, suiting the
 glue-logic  which drives the H-Bridge.
 \fi
 
-\M{52}\B\X52:Initialize the Timer Counter 0 for PWM\X${}\E{}$\6
+\M{54}\B\X54:Initialize the Timer Counter 0 for PWM\X${}\E{}$\6
 ${}\{{}$\SHC{ 15.9.1 TCCR0A – Timer/Counter Control Register A }\1\6
 ${}\.{TCCR0A}\MRL{{\OR}{\K}}(\T{1}\LL\.{WGM00}){}$;\SHC{ Phase correct, mode 1
 of PWM (table 15-9) }\6

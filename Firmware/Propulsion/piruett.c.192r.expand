@@ -26,9 +26,9 @@ try_optimize_cfg iteration 2
 (note 3 1 2 2 [bb 2] NOTE_INSN_BASIC_BLOCK)
 (note 2 3 5 2 NOTE_INSN_FUNCTION_BEG)
 (insn 5 2 6 2 (set (reg:HI 42)
-        (symbol_ref:HI ("pwcCalc") [flags 0x3]  <function_decl 0x7f8b95e20438 pwcCalc>)) ./piruett.w:367 -1
+        (symbol_ref:HI ("pwcCalc") [flags 0x3]  <function_decl 0x7fed6df33438 pwcCalc>)) ./piruett.w:367 -1
      (nil))
-(insn 6 5 0 2 (set (mem/f/c:HI (symbol_ref:HI ("handleIrq") [flags 0x2]  <var_decl 0x7f8b95e12360 handleIrq>) [1 handleIrq+0 S2 A8])
+(insn 6 5 0 2 (set (mem/f/c:HI (symbol_ref:HI ("handleIrq") [flags 0x2]  <var_decl 0x7fed6df25360 handleIrq>) [1 handleIrq+0 S2 A8])
         (reg:HI 42)) ./piruett.w:367 -1
      (nil))
 
@@ -59,9 +59,9 @@ try_optimize_cfg iteration 2
 (note 3 1 2 2 [bb 2] NOTE_INSN_BASIC_BLOCK)
 (note 2 3 5 2 NOTE_INSN_FUNCTION_BEG)
 (insn 5 2 6 2 (set (reg:HI 42)
-        (symbol_ref:HI ("lostSignal") [flags 0x3]  <function_decl 0x7f8b95e20798 lostSignal>)) ./piruett.w:377 -1
+        (symbol_ref:HI ("lostSignal") [flags 0x3]  <function_decl 0x7fed6df33798 lostSignal>)) ./piruett.w:377 -1
      (nil))
-(insn 6 5 0 2 (set (mem/f/c:HI (symbol_ref:HI ("handleIrq") [flags 0x2]  <var_decl 0x7f8b95e12360 handleIrq>) [1 handleIrq+0 S2 A8])
+(insn 6 5 0 2 (set (mem/f/c:HI (symbol_ref:HI ("handleIrq") [flags 0x2]  <var_decl 0x7fed6df25360 handleIrq>) [1 handleIrq+0 S2 A8])
         (reg:HI 42)) ./piruett.w:377 -1
      (nil))
 
@@ -468,11 +468,11 @@ Forwarding edge 5->6 to 10 failed.
         (reg/v/f:HI 50 [ input_s ])) ./piruett.w:421 -1
      (nil))
 (call_insn/j 50 49 51 10 (parallel [
-            (call (mem:HI (symbol_ref:HI ("edgeSelect") [flags 0x3]  <function_decl 0x7f8b95e20510 edgeSelect>) [0 edgeSelect S2 A8])
+            (call (mem:HI (symbol_ref:HI ("edgeSelect") [flags 0x3]  <function_decl 0x7fed6df33510 edgeSelect>) [0 edgeSelect S2 A8])
                 (const_int 0 [0]))
             (use (const_int 1 [0x1]))
         ]) ./piruett.w:421 -1
-     (expr_list:REG_CALL_DECL (symbol_ref:HI ("edgeSelect") [flags 0x3]  <function_decl 0x7f8b95e20510 edgeSelect>)
+     (expr_list:REG_CALL_DECL (symbol_ref:HI ("edgeSelect") [flags 0x3]  <function_decl 0x7fed6df33510 edgeSelect>)
         (expr_list:REG_EH_REGION (const_int 0 [0])
             (nil)))
     (expr_list:HI (use (reg:HI 24 r24))
@@ -521,11 +521,11 @@ try_optimize_cfg iteration 2
         (reg/v/f:HI 42 [ input_s ])) ./piruett.w:432 -1
      (nil))
 (call_insn/j 10 9 11 2 (parallel [
-            (call (mem:HI (symbol_ref:HI ("edgeSelect") [flags 0x3]  <function_decl 0x7f8b95e20510 edgeSelect>) [0 edgeSelect S2 A8])
+            (call (mem:HI (symbol_ref:HI ("edgeSelect") [flags 0x3]  <function_decl 0x7fed6df33510 edgeSelect>) [0 edgeSelect S2 A8])
                 (const_int 0 [0]))
             (use (const_int 1 [0x1]))
         ]) ./piruett.w:432 -1
-     (expr_list:REG_CALL_DECL (symbol_ref:HI ("edgeSelect") [flags 0x3]  <function_decl 0x7f8b95e20510 edgeSelect>)
+     (expr_list:REG_CALL_DECL (symbol_ref:HI ("edgeSelect") [flags 0x3]  <function_decl 0x7fed6df33510 edgeSelect>)
         (expr_list:REG_EH_REGION (const_int 0 [0])
             (nil)))
     (expr_list:HI (use (reg:HI 24 r24))
@@ -960,7 +960,7 @@ try_optimize_cfg iteration 2
  -> 63)
 (note 10 9 11 4 [bb 4] NOTE_INSN_BASIC_BLOCK)
 (insn 11 10 12 4 (set (reg:QI 69)
-        (mem/c:QI (symbol_ref:HI ("lock.1735") [flags 0x2]  <var_decl 0x7f8b95e12ab0 lock>) [0 lock+0 S1 A8])) ./piruett.w:570 -1
+        (mem/c:QI (symbol_ref:HI ("lock.1735") [flags 0x2]  <var_decl 0x7fed6df25ab0 lock>) [0 lock+0 S1 A8])) ./piruett.w:570 -1
      (nil))
 (insn 12 11 13 4 (set (cc0)
         (compare (reg:QI 69)
@@ -1259,7 +1259,7 @@ try_optimize_cfg iteration 2
      (nil))
 (code_label 74 73 118 22 35 "" [1 uses])
 (note 118 74 75 22 [bb 22] NOTE_INSN_BASIC_BLOCK)
-(insn 75 118 76 22 (set (mem/c:QI (symbol_ref:HI ("lock.1735") [flags 0x2]  <var_decl 0x7f8b95e12ab0 lock>) [0 lock+0 S1 A8])
+(insn 75 118 76 22 (set (mem/c:QI (symbol_ref:HI ("lock.1735") [flags 0x2]  <var_decl 0x7fed6df25ab0 lock>) [0 lock+0 S1 A8])
         (reg:QI 95 [ D.2066 ])) ./piruett.w:577 -1
      (nil))
 (insn 76 75 77 22 (set (reg:HI 96 [ D.2065 ])
@@ -1861,11 +1861,11 @@ try_optimize_cfg iteration 2
         (const_int 0 [0])) ./piruett.w:602 -1
      (nil))
 (call_insn 28 27 29 7 (parallel [
-            (call (mem:HI (symbol_ref:HI ("larboardDirection") [flags 0x3]  <function_decl 0x7f8b95e20288 larboardDirection>) [0 larboardDirection S2 A8])
+            (call (mem:HI (symbol_ref:HI ("larboardDirection") [flags 0x3]  <function_decl 0x7fed6df33288 larboardDirection>) [0 larboardDirection S2 A8])
                 (const_int 0 [0]))
             (use (const_int 0 [0]))
         ]) ./piruett.w:602 -1
-     (expr_list:REG_CALL_DECL (symbol_ref:HI ("larboardDirection") [flags 0x3]  <function_decl 0x7f8b95e20288 larboardDirection>)
+     (expr_list:REG_CALL_DECL (symbol_ref:HI ("larboardDirection") [flags 0x3]  <function_decl 0x7fed6df33288 larboardDirection>)
         (expr_list:REG_EH_REGION (const_int 0 [0])
             (nil)))
     (expr_list:QI (use (reg:QI 24 r24))
@@ -1984,11 +1984,11 @@ try_optimize_cfg iteration 2
         (const_int 0 [0])) ./piruett.w:613 -1
      (nil))
 (call_insn 61 60 62 14 (parallel [
-            (call (mem:HI (symbol_ref:HI ("starboardDirection") [flags 0x3]  <function_decl 0x7f8b95e20360 starboardDirection>) [0 starboardDirection S2 A8])
+            (call (mem:HI (symbol_ref:HI ("starboardDirection") [flags 0x3]  <function_decl 0x7fed6df33360 starboardDirection>) [0 starboardDirection S2 A8])
                 (const_int 0 [0]))
             (use (const_int 0 [0]))
         ]) ./piruett.w:613 -1
-     (expr_list:REG_CALL_DECL (symbol_ref:HI ("starboardDirection") [flags 0x3]  <function_decl 0x7f8b95e20360 starboardDirection>)
+     (expr_list:REG_CALL_DECL (symbol_ref:HI ("starboardDirection") [flags 0x3]  <function_decl 0x7fed6df33360 starboardDirection>)
         (expr_list:REG_EH_REGION (const_int 0 [0])
             (nil)))
     (expr_list:QI (use (reg:QI 24 r24))
@@ -2071,11 +2071,11 @@ try_optimize_cfg iteration 2
         (const_int 1 [0x1])) ./piruett.w:621 -1
      (nil))
 (call_insn/j 82 81 83 19 (parallel [
-            (call (mem:HI (symbol_ref:HI ("relayCntl") [flags 0x3]  <function_decl 0x7f8b95e200d8 relayCntl>) [0 relayCntl S2 A8])
+            (call (mem:HI (symbol_ref:HI ("relayCntl") [flags 0x3]  <function_decl 0x7fed6df330d8 relayCntl>) [0 relayCntl S2 A8])
                 (const_int 0 [0]))
             (use (const_int 1 [0x1]))
         ]) ./piruett.w:621 -1
-     (expr_list:REG_CALL_DECL (symbol_ref:HI ("relayCntl") [flags 0x3]  <function_decl 0x7f8b95e200d8 relayCntl>)
+     (expr_list:REG_CALL_DECL (symbol_ref:HI ("relayCntl") [flags 0x3]  <function_decl 0x7fed6df330d8 relayCntl>)
         (expr_list:REG_EH_REGION (const_int 0 [0])
             (nil)))
     (expr_list:QI (use (reg:QI 24 r24))
@@ -2087,11 +2087,11 @@ try_optimize_cfg iteration 2
         (const_int 0 [0])) ./piruett.w:623 -1
      (nil))
 (call_insn/j 87 86 88 20 (parallel [
-            (call (mem:HI (symbol_ref:HI ("relayCntl") [flags 0x3]  <function_decl 0x7f8b95e200d8 relayCntl>) [0 relayCntl S2 A8])
+            (call (mem:HI (symbol_ref:HI ("relayCntl") [flags 0x3]  <function_decl 0x7fed6df330d8 relayCntl>) [0 relayCntl S2 A8])
                 (const_int 0 [0]))
             (use (const_int 1 [0x1]))
         ]) ./piruett.w:623 -1
-     (expr_list:REG_CALL_DECL (symbol_ref:HI ("relayCntl") [flags 0x3]  <function_decl 0x7f8b95e200d8 relayCntl>)
+     (expr_list:REG_CALL_DECL (symbol_ref:HI ("relayCntl") [flags 0x3]  <function_decl 0x7fed6df330d8 relayCntl>)
         (expr_list:REG_EH_REGION (const_int 0 [0])
             (nil)))
     (expr_list:QI (use (reg:QI 24 r24))
@@ -2448,29 +2448,29 @@ try_optimize_cfg iteration 2
         (reg:QI 69 [ D.2094 ])) ./piruett.w:688 -1
      (nil))
 (insn 94 93 95 2 (set (reg/f:HI 136)
-        (const_int 96 [0x60])) ./piruett.w:733 -1
+        (const_int 96 [0x60])) ./piruett.w:761 -1
      (nil))
 (insn 95 94 96 2 (set (reg:QI 70 [ D.2094 ])
-        (mem/v:QI (reg/f:HI 136) [0 MEM[(volatile uint8_t *)96B]+0 S1 A8])) ./piruett.w:733 -1
+        (mem/v:QI (reg/f:HI 136) [0 MEM[(volatile uint8_t *)96B]+0 S1 A8])) ./piruett.w:761 -1
      (nil))
 (insn 96 95 97 2 (set (reg:QI 71 [ D.2094 ])
         (ior:QI (reg:QI 70 [ D.2094 ])
-            (const_int 24 [0x18]))) ./piruett.w:733 -1
+            (const_int 24 [0x18]))) ./piruett.w:761 -1
      (nil))
 (insn 97 96 98 2 (set (reg/f:HI 137)
-        (const_int 96 [0x60])) ./piruett.w:733 -1
+        (const_int 96 [0x60])) ./piruett.w:761 -1
      (nil))
 (insn 98 97 99 2 (set (mem/v:QI (reg/f:HI 137) [0 MEM[(volatile uint8_t *)96B]+0 S1 A8])
-        (reg:QI 71 [ D.2094 ])) ./piruett.w:733 -1
+        (reg:QI 71 [ D.2094 ])) ./piruett.w:761 -1
      (nil))
 (insn 99 98 100 2 (set (reg/f:HI 138)
-        (const_int 96 [0x60])) ./piruett.w:734 -1
+        (const_int 96 [0x60])) ./piruett.w:762 -1
      (nil))
 (insn 100 99 101 2 (set (reg:QI 139)
-        (const_int 69 [0x45])) ./piruett.w:734 -1
+        (const_int 69 [0x45])) ./piruett.w:762 -1
      (nil))
 (insn 101 100 102 2 (set (mem/v:QI (reg/f:HI 138) [0 MEM[(volatile uint8_t *)96B]+0 S1 A8])
-        (reg:QI 139)) ./piruett.w:734 -1
+        (reg:QI 139)) ./piruett.w:762 -1
      (nil))
 (insn 102 101 103 2 (parallel [
             (asm_operands/v ("sei") ("") 0 []
@@ -2480,100 +2480,100 @@ try_optimize_cfg iteration 2
         ]) ./piruett.w:257 -1
      (nil))
 (insn 103 102 104 2 (set (reg/f:HI 140)
-        (const_int 68 [0x44])) ./piruett.w:749 -1
+        (const_int 68 [0x44])) ./piruett.w:777 -1
      (nil))
 (insn 104 103 105 2 (set (reg:QI 72 [ D.2094 ])
-        (mem/v:QI (reg/f:HI 140) [0 MEM[(volatile uint8_t *)68B]+0 S1 A8])) ./piruett.w:749 -1
+        (mem/v:QI (reg/f:HI 140) [0 MEM[(volatile uint8_t *)68B]+0 S1 A8])) ./piruett.w:777 -1
      (nil))
 (insn 105 104 106 2 (set (reg:QI 73 [ D.2094 ])
         (ior:QI (reg:QI 72 [ D.2094 ])
-            (const_int 1 [0x1]))) ./piruett.w:749 -1
+            (const_int 1 [0x1]))) ./piruett.w:777 -1
      (nil))
 (insn 106 105 107 2 (set (reg/f:HI 141)
-        (const_int 68 [0x44])) ./piruett.w:749 -1
+        (const_int 68 [0x44])) ./piruett.w:777 -1
      (nil))
 (insn 107 106 108 2 (set (mem/v:QI (reg/f:HI 141) [0 MEM[(volatile uint8_t *)68B]+0 S1 A8])
-        (reg:QI 73 [ D.2094 ])) ./piruett.w:749 -1
+        (reg:QI 73 [ D.2094 ])) ./piruett.w:777 -1
      (nil))
 (insn 108 107 109 2 (set (reg/f:HI 142)
-        (const_int 68 [0x44])) ./piruett.w:750 -1
+        (const_int 68 [0x44])) ./piruett.w:778 -1
      (nil))
 (insn 109 108 110 2 (set (reg:QI 74 [ D.2094 ])
-        (mem/v:QI (reg/f:HI 142) [0 MEM[(volatile uint8_t *)68B]+0 S1 A8])) ./piruett.w:750 -1
+        (mem/v:QI (reg/f:HI 142) [0 MEM[(volatile uint8_t *)68B]+0 S1 A8])) ./piruett.w:778 -1
      (nil))
 (insn 110 109 111 2 (set (reg:QI 75 [ D.2094 ])
         (ior:QI (reg:QI 74 [ D.2094 ])
-            (const_int -128 [0xffffffffffffff80]))) ./piruett.w:750 -1
+            (const_int -128 [0xffffffffffffff80]))) ./piruett.w:778 -1
      (nil))
 (insn 111 110 112 2 (set (reg/f:HI 143)
-        (const_int 68 [0x44])) ./piruett.w:750 -1
+        (const_int 68 [0x44])) ./piruett.w:778 -1
      (nil))
 (insn 112 111 113 2 (set (mem/v:QI (reg/f:HI 143) [0 MEM[(volatile uint8_t *)68B]+0 S1 A8])
-        (reg:QI 75 [ D.2094 ])) ./piruett.w:750 -1
+        (reg:QI 75 [ D.2094 ])) ./piruett.w:778 -1
      (nil))
 (insn 113 112 114 2 (set (reg/f:HI 144)
-        (const_int 68 [0x44])) ./piruett.w:751 -1
+        (const_int 68 [0x44])) ./piruett.w:779 -1
      (nil))
 (insn 114 113 115 2 (set (reg:QI 76 [ D.2094 ])
-        (mem/v:QI (reg/f:HI 144) [0 MEM[(volatile uint8_t *)68B]+0 S1 A8])) ./piruett.w:751 -1
+        (mem/v:QI (reg/f:HI 144) [0 MEM[(volatile uint8_t *)68B]+0 S1 A8])) ./piruett.w:779 -1
      (nil))
 (insn 115 114 116 2 (set (reg:QI 77 [ D.2094 ])
         (ior:QI (reg:QI 76 [ D.2094 ])
-            (const_int 32 [0x20]))) ./piruett.w:751 -1
+            (const_int 32 [0x20]))) ./piruett.w:779 -1
      (nil))
 (insn 116 115 117 2 (set (reg/f:HI 145)
-        (const_int 68 [0x44])) ./piruett.w:751 -1
+        (const_int 68 [0x44])) ./piruett.w:779 -1
      (nil))
 (insn 117 116 118 2 (set (mem/v:QI (reg/f:HI 145) [0 MEM[(volatile uint8_t *)68B]+0 S1 A8])
-        (reg:QI 77 [ D.2094 ])) ./piruett.w:751 -1
+        (reg:QI 77 [ D.2094 ])) ./piruett.w:779 -1
      (nil))
 (insn 118 117 119 2 (set (reg/f:HI 146)
-        (const_int 68 [0x44])) ./piruett.w:752 -1
+        (const_int 68 [0x44])) ./piruett.w:780 -1
      (nil))
 (insn 119 118 120 2 (set (reg:QI 78 [ D.2094 ])
-        (mem/v:QI (reg/f:HI 146) [0 MEM[(volatile uint8_t *)68B]+0 S1 A8])) ./piruett.w:752 -1
+        (mem/v:QI (reg/f:HI 146) [0 MEM[(volatile uint8_t *)68B]+0 S1 A8])) ./piruett.w:780 -1
      (nil))
 (insn 120 119 121 2 (set (reg:QI 79 [ D.2094 ])
         (ior:QI (reg:QI 78 [ D.2094 ])
-            (const_int 64 [0x40]))) ./piruett.w:752 -1
+            (const_int 64 [0x40]))) ./piruett.w:780 -1
      (nil))
 (insn 121 120 122 2 (set (reg/f:HI 147)
-        (const_int 68 [0x44])) ./piruett.w:752 -1
+        (const_int 68 [0x44])) ./piruett.w:780 -1
      (nil))
 (insn 122 121 123 2 (set (mem/v:QI (reg/f:HI 147) [0 MEM[(volatile uint8_t *)68B]+0 S1 A8])
-        (reg:QI 79 [ D.2094 ])) ./piruett.w:752 -1
+        (reg:QI 79 [ D.2094 ])) ./piruett.w:780 -1
      (nil))
 (insn 123 122 124 2 (set (reg/f:HI 148)
-        (const_int 68 [0x44])) ./piruett.w:753 -1
+        (const_int 68 [0x44])) ./piruett.w:781 -1
      (nil))
 (insn 124 123 125 2 (set (reg:QI 80 [ D.2094 ])
-        (mem/v:QI (reg/f:HI 148) [0 MEM[(volatile uint8_t *)68B]+0 S1 A8])) ./piruett.w:753 -1
+        (mem/v:QI (reg/f:HI 148) [0 MEM[(volatile uint8_t *)68B]+0 S1 A8])) ./piruett.w:781 -1
      (nil))
 (insn 125 124 126 2 (set (reg:QI 81 [ D.2094 ])
         (ior:QI (reg:QI 80 [ D.2094 ])
-            (const_int 16 [0x10]))) ./piruett.w:753 -1
+            (const_int 16 [0x10]))) ./piruett.w:781 -1
      (nil))
 (insn 126 125 127 2 (set (reg/f:HI 149)
-        (const_int 68 [0x44])) ./piruett.w:753 -1
+        (const_int 68 [0x44])) ./piruett.w:781 -1
      (nil))
 (insn 127 126 128 2 (set (mem/v:QI (reg/f:HI 149) [0 MEM[(volatile uint8_t *)68B]+0 S1 A8])
-        (reg:QI 81 [ D.2094 ])) ./piruett.w:753 -1
+        (reg:QI 81 [ D.2094 ])) ./piruett.w:781 -1
      (nil))
 (insn 128 127 129 2 (set (reg/f:HI 150)
-        (const_int 69 [0x45])) ./piruett.w:756 -1
+        (const_int 69 [0x45])) ./piruett.w:784 -1
      (nil))
 (insn 129 128 130 2 (set (reg:QI 82 [ D.2094 ])
-        (mem/v:QI (reg/f:HI 150) [0 MEM[(volatile uint8_t *)69B]+0 S1 A8])) ./piruett.w:756 -1
+        (mem/v:QI (reg/f:HI 150) [0 MEM[(volatile uint8_t *)69B]+0 S1 A8])) ./piruett.w:784 -1
      (nil))
 (insn 130 129 131 2 (set (reg:QI 83 [ D.2094 ])
         (ior:QI (reg:QI 82 [ D.2094 ])
-            (const_int 2 [0x2]))) ./piruett.w:756 -1
+            (const_int 2 [0x2]))) ./piruett.w:784 -1
      (nil))
 (insn 131 130 132 2 (set (reg/f:HI 151)
-        (const_int 69 [0x45])) ./piruett.w:756 -1
+        (const_int 69 [0x45])) ./piruett.w:784 -1
      (nil))
 (insn 132 131 133 2 (set (mem/v:QI (reg/f:HI 151) [0 MEM[(volatile uint8_t *)69B]+0 S1 A8])
-        (reg:QI 83 [ D.2094 ])) ./piruett.w:756 -1
+        (reg:QI 83 [ D.2094 ])) ./piruett.w:784 -1
      (nil))
 (insn 133 132 134 2 (set (reg/f:HI 152)
         (const_int 83 [0x53])) ./piruett.w:692 -1
@@ -2595,11 +2595,11 @@ try_optimize_cfg iteration 2
         (const_int 0 [0])) ./piruett.w:284 -1
      (nil))
 (call_insn 139 138 140 2 (parallel [
-            (call (mem:HI (symbol_ref:HI ("ledCntl") [flags 0x3]  <function_decl 0x7f8b95e201b0 ledCntl>) [0 ledCntl S2 A8])
+            (call (mem:HI (symbol_ref:HI ("ledCntl") [flags 0x3]  <function_decl 0x7fed6df331b0 ledCntl>) [0 ledCntl S2 A8])
                 (const_int 0 [0]))
             (use (const_int 0 [0]))
         ]) ./piruett.w:284 -1
-     (expr_list:REG_CALL_DECL (symbol_ref:HI ("ledCntl") [flags 0x3]  <function_decl 0x7f8b95e201b0 ledCntl>)
+     (expr_list:REG_CALL_DECL (symbol_ref:HI ("ledCntl") [flags 0x3]  <function_decl 0x7fed6df331b0 ledCntl>)
         (expr_list:REG_EH_REGION (const_int 0 [0])
             (nil)))
     (expr_list:QI (use (reg:QI 24 r24))
@@ -2608,11 +2608,11 @@ try_optimize_cfg iteration 2
         (reg/f:HI 37 virtual-stack-vars)) ./piruett.w:291 -1
      (nil))
 (call_insn 141 140 142 2 (parallel [
-            (call (mem:HI (symbol_ref:HI ("edgeSelect") [flags 0x3]  <function_decl 0x7f8b95e20510 edgeSelect>) [0 edgeSelect S2 A8])
+            (call (mem:HI (symbol_ref:HI ("edgeSelect") [flags 0x3]  <function_decl 0x7fed6df33510 edgeSelect>) [0 edgeSelect S2 A8])
                 (const_int 0 [0]))
             (use (const_int 0 [0]))
         ]) ./piruett.w:291 -1
-     (expr_list:REG_CALL_DECL (symbol_ref:HI ("edgeSelect") [flags 0x3]  <function_decl 0x7f8b95e20510 edgeSelect>)
+     (expr_list:REG_CALL_DECL (symbol_ref:HI ("edgeSelect") [flags 0x3]  <function_decl 0x7fed6df33510 edgeSelect>)
         (expr_list:REG_EH_REGION (const_int 0 [0])
             (nil)))
     (expr_list:HI (use (reg:HI 24 r24))
@@ -2637,11 +2637,11 @@ try_optimize_cfg iteration 2
         (reg:HI 154)) ./piruett.w:310 -1
      (nil))
 (call_insn 149 148 150 5 (parallel [
-            (call (mem:HI (symbol_ref:HI ("setPwm") [flags 0x3]  <function_decl 0x7f8b95e206c0 setPwm>) [0 setPwm S2 A8])
+            (call (mem:HI (symbol_ref:HI ("setPwm") [flags 0x3]  <function_decl 0x7fed6df336c0 setPwm>) [0 setPwm S2 A8])
                 (const_int 0 [0]))
             (use (const_int 0 [0]))
         ]) ./piruett.w:310 -1
-     (expr_list:REG_CALL_DECL (symbol_ref:HI ("setPwm") [flags 0x3]  <function_decl 0x7f8b95e206c0 setPwm>)
+     (expr_list:REG_CALL_DECL (symbol_ref:HI ("setPwm") [flags 0x3]  <function_decl 0x7fed6df336c0 setPwm>)
         (expr_list:REG_EH_REGION (const_int 0 [0])
             (nil)))
     (expr_list:HI (use (reg:HI 24 r24))
@@ -2684,7 +2684,7 @@ try_optimize_cfg iteration 2
         (reg:QI 89 [ D.2094 ])) ./piruett.w:312 -1
      (nil))
 (insn 161 160 162 5 (set (reg/f:HI 90 [ D.2095 ])
-        (mem/f/c:HI (symbol_ref:HI ("handleIrq") [flags 0x2]  <var_decl 0x7f8b95e12360 handleIrq>) [1 handleIrq+0 S2 A8])) ./piruett.w:324 -1
+        (mem/f/c:HI (symbol_ref:HI ("handleIrq") [flags 0x2]  <var_decl 0x7fed6df25360 handleIrq>) [1 handleIrq+0 S2 A8])) ./piruett.w:324 -1
      (nil))
 (insn 162 161 163 5 (parallel [
             (set (cc0)
@@ -2713,7 +2713,7 @@ try_optimize_cfg iteration 2
         (nil))
     (expr_list:HI (use (reg:HI 24 r24))
         (nil)))
-(insn 167 166 168 6 (set (mem/f/c:HI (symbol_ref:HI ("handleIrq") [flags 0x2]  <var_decl 0x7f8b95e12360 handleIrq>) [1 handleIrq+0 S2 A8])
+(insn 167 166 168 6 (set (mem/f/c:HI (symbol_ref:HI ("handleIrq") [flags 0x2]  <var_decl 0x7fed6df25360 handleIrq>) [1 handleIrq+0 S2 A8])
         (const_int 0 [0])) ./piruett.w:327 -1
      (nil))
 (code_label 168 167 169 7 76 "" [1 uses])
@@ -2740,11 +2740,11 @@ try_optimize_cfg iteration 2
      (nil))
 (call_insn/i 175 174 176 7 (parallel [
             (set (reg:HI 24 r24)
-                (call (mem:HI (symbol_ref:HI ("scaler") [flags 0x3]  <function_decl 0x7f8b95e20870 scaler>) [0 scaler S2 A8])
+                (call (mem:HI (symbol_ref:HI ("scaler") [flags 0x3]  <function_decl 0x7fed6df33870 scaler>) [0 scaler S2 A8])
                     (const_int 0 [0])))
             (use (const_int 0 [0]))
         ]) ./piruett.w:332 -1
-     (expr_list:REG_CALL_DECL (symbol_ref:HI ("scaler") [flags 0x3]  <function_decl 0x7f8b95e20870 scaler>)
+     (expr_list:REG_CALL_DECL (symbol_ref:HI ("scaler") [flags 0x3]  <function_decl 0x7fed6df33870 scaler>)
         (expr_list:REG_EH_REGION (const_int 0 [0])
             (nil)))
     (expr_list:HI (use (reg:HI 24 r24))
@@ -2780,11 +2780,11 @@ try_optimize_cfg iteration 2
      (nil))
 (call_insn/i 183 182 184 7 (parallel [
             (set (reg:HI 24 r24)
-                (call (mem:HI (symbol_ref:HI ("scaler") [flags 0x3]  <function_decl 0x7f8b95e20870 scaler>) [0 scaler S2 A8])
+                (call (mem:HI (symbol_ref:HI ("scaler") [flags 0x3]  <function_decl 0x7fed6df33870 scaler>) [0 scaler S2 A8])
                     (const_int 0 [0])))
             (use (const_int 0 [0]))
         ]) ./piruett.w:333 -1
-     (expr_list:REG_CALL_DECL (symbol_ref:HI ("scaler") [flags 0x3]  <function_decl 0x7f8b95e20870 scaler>)
+     (expr_list:REG_CALL_DECL (symbol_ref:HI ("scaler") [flags 0x3]  <function_decl 0x7fed6df33870 scaler>)
         (expr_list:REG_EH_REGION (const_int 0 [0])
             (nil)))
     (expr_list:HI (use (reg:HI 24 r24))
@@ -2816,11 +2816,11 @@ try_optimize_cfg iteration 2
         (reg:HI 164)) ./piruett.w:336 -1
      (nil))
 (call_insn 190 189 191 7 (parallel [
-            (call (mem:HI (symbol_ref:HI ("translate") [flags 0x3]  <function_decl 0x7f8b95e205e8 translate>) [0 translate S2 A8])
+            (call (mem:HI (symbol_ref:HI ("translate") [flags 0x3]  <function_decl 0x7fed6df335e8 translate>) [0 translate S2 A8])
                 (const_int 0 [0]))
             (use (const_int 0 [0]))
         ]) ./piruett.w:336 -1
-     (expr_list:REG_CALL_DECL (symbol_ref:HI ("translate") [flags 0x3]  <function_decl 0x7f8b95e205e8 translate>)
+     (expr_list:REG_CALL_DECL (symbol_ref:HI ("translate") [flags 0x3]  <function_decl 0x7fed6df335e8 translate>)
         (expr_list:REG_EH_REGION (const_int 0 [0])
             (nil)))
     (expr_list:HI (use (reg:HI 24 r24))
@@ -2868,11 +2868,11 @@ try_optimize_cfg iteration 2
         (const_int 0 [0])) ./piruett.w:342 -1
      (nil))
 (call_insn 201 200 203 9 (parallel [
-            (call (mem:HI (symbol_ref:HI ("ledCntl") [flags 0x3]  <function_decl 0x7f8b95e201b0 ledCntl>) [0 ledCntl S2 A8])
+            (call (mem:HI (symbol_ref:HI ("ledCntl") [flags 0x3]  <function_decl 0x7fed6df331b0 ledCntl>) [0 ledCntl S2 A8])
                 (const_int 0 [0]))
             (use (const_int 0 [0]))
         ]) ./piruett.w:342 -1
-     (expr_list:REG_CALL_DECL (symbol_ref:HI ("ledCntl") [flags 0x3]  <function_decl 0x7f8b95e201b0 ledCntl>)
+     (expr_list:REG_CALL_DECL (symbol_ref:HI ("ledCntl") [flags 0x3]  <function_decl 0x7fed6df331b0 ledCntl>)
         (expr_list:REG_EH_REGION (const_int 0 [0])
             (nil)))
     (expr_list:QI (use (reg:QI 24 r24))
@@ -2888,11 +2888,11 @@ try_optimize_cfg iteration 2
         (const_int 1 [0x1])) ./piruett.w:344 -1
      (nil))
 (call_insn 208 207 209 10 (parallel [
-            (call (mem:HI (symbol_ref:HI ("ledCntl") [flags 0x3]  <function_decl 0x7f8b95e201b0 ledCntl>) [0 ledCntl S2 A8])
+            (call (mem:HI (symbol_ref:HI ("ledCntl") [flags 0x3]  <function_decl 0x7fed6df331b0 ledCntl>) [0 ledCntl S2 A8])
                 (const_int 0 [0]))
             (use (const_int 0 [0]))
         ]) ./piruett.w:344 -1
-     (expr_list:REG_CALL_DECL (symbol_ref:HI ("ledCntl") [flags 0x3]  <function_decl 0x7f8b95e201b0 ledCntl>)
+     (expr_list:REG_CALL_DECL (symbol_ref:HI ("ledCntl") [flags 0x3]  <function_decl 0x7fed6df331b0 ledCntl>)
         (expr_list:REG_EH_REGION (const_int 0 [0])
             (nil)))
     (expr_list:QI (use (reg:QI 24 r24))

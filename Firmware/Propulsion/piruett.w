@@ -722,6 +722,34 @@ To enable this interrupt, set the ACIE bit of register ACSR.
 }
 
 @
+For a timer tick at each 1/4 second. We will use timer counter 2, our last
+timer.
+It only has an 8 bit prescaler so it will be too fast and will need to be
+divided.
+The prescaler is set to the maximum of 1024.
+The timer is set to CTC mode so that the time loop is trimable.
+That will be pretty fast so we need more division in software.
+We want to divide by a power of two for efficiency and so 0x80 (0d128) is as
+small as we can go. This is also half a uint8\_t so the math works out very
+well.
+The time is trimmed to make 128 passes about 0.25 seconds by loading compare
+register, OCR2A, with 0xf3 (0d243).
+The interrupt is enabled TIMSK2 for output compare register A. 
+With all that we will have interrupt TIMER2 COMPA fire every 31 ms.
+For the software division we will increment an uint8\_t in the handler on each
+pass and do something at both 0x00 and 0x80 (0d128).
+The test would be !(tickCount \& ~0x80). 
+
+@ @<Initialize tick timer...@>=
+{
+TCCR2B |= (1<<CS22) | (1<<CS21) | (1<<CS20); // maximum prescale (see 18.11.2)
+TCCR2A |= (1<<WGM21); // CTC mode (see 18.11.1)
+OCR2A = 0xf3; // Do I need to make this clearer?
+TIMSK2 |= (1<<OCIE2A); // Interrupt on a compare match
+}
+
+
+@
 See section 11.8 in the datasheet for details on the Watchdog Timer.
 This is in the ``Interrupt Mode''. When controlled remotlely or in an
 autonomous dive this should not time-out.

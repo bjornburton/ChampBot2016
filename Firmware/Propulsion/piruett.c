@@ -178,8 +178,8 @@ DDRD|= ((1<<DDD3)|(1<<DDD4));
 /*:45*/
 #line 250 "./piruett.w"
 
-/*50:*/
-#line 730 "./piruett.w"
+/*52:*/
+#line 758 "./piruett.w"
 
 {
 
@@ -188,7 +188,7 @@ WDTCSR= (1<<WDIE)|(1<<WDP2)|(1<<WDP0);
 
 }
 
-/*:50*/
+/*:52*/
 #line 251 "./piruett.w"
 
 
@@ -201,8 +201,8 @@ sei();
 /*:14*//*15:*/
 #line 264 "./piruett.w"
 
-/*52:*/
-#line 746 "./piruett.w"
+/*54:*/
+#line 774 "./piruett.w"
 
 {
 
@@ -216,7 +216,7 @@ TCCR0A|= (1<<COM0B0);
 TCCR0B|= (1<<CS01);
 }
 
-/*:52*/
+/*:54*/
 #line 265 "./piruett.w"
 
 
