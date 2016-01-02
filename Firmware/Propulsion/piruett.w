@@ -133,11 +133,13 @@ older word ``larboard''.
 @d STOPPED 0
 
 @ Here are some other definitions.
-@d CH2RISE 0
-@d CH2FALL 1
-@d CH1FALL 2
+@d CH2RISE 0   // rising edge of RC's remote channel 2
+@d CH2FALL 1   // falling edge of RC's remote channel 2
+@d CH1FALL 2   // falling edge of RC's remote channel 1
 @d MAX_DUTYCYCLE 98 // 98\% to support charge pump of bridge-driver
-
+@d SURFACED 0  // the mode of being surfaced
+@d DIVING 1    // the mode of actively diving
+@d SUBMERGED 2 //the mode of being submerged
 
 @ @<Include...@>=
 # include <avr/io.h> // need some port access
@@ -176,6 +178,15 @@ typedef struct {
     const int16_t maxOut;   // output, maximum
     const int8_t  deadBand; // width of zero in terms of output units
    } transStruct;
+
+@ This structure type keeps track of the state of dive and submerge.
+
+@<Types...@>=
+typedef struct {
+    uint16_t diveTime; // 0.25 sec intervals allowed before it gets canceled
+    uint16_t submergeTime; // 0.25 sec intervals to remain at depth
+    uint8_t mode; // SURFACE, DIVING or SUBMERGED are the modes 
+    } diveStruct;
 
 
 @ @<Prototypes...@>=
