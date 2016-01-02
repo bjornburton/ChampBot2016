@@ -13,75 +13,74 @@ It features separate thrust and steering, including piruett turning. Also an
 autonomous dive function has been added.
   
 This will facilitate motion by taking ``thrust'' and ``radius'' pulse-width,
-or \.{PWC}, inputs from the Futaba-Kyosho \.{RC} receiver and converting them
-to the appropriate motor actions.
+or PWC, inputs from the Futaba-Kyosho RC receiver and converting them to the
+appropriate motor actions.
 
 Also an autonomous dive function has been added.
 
 
 Thrust is Channel 2, entering analog input A1, and Radius is channel 1, at A0.
-The action will be similar to driving an \.{RC} car or boat.
+The action will be similar to driving an RC car or boat.
 By keeping it natural, it should be easier to navigate the course than with a
 skid-steer style control.
 
-We are using the Wingxing \.{DBH-01 (B/C)} and the Inputs are unique on this.
-The \.{PWM} logic input goes to two different pins, depending on direction!
-The non-\.{PWM} pin must be held low.
-This is a big problem since \.{PWM} outputs have dedicated pins.
-Two \.{AVR} timers would be needed to control two motors; waistful.
+We are using the Wingxing DBH-01 (B/C) and the Inputs are unique on this.
+The PWM logic input goes to two different pins, depending on direction!
+The non-PWM pin must be held low.
+This is a big problem since PWM outputs have dedicated pins.
+Two AVR timers would be needed to control two motors; waistful.
 
-The odd example in the \.{DBH-01} datasheet has \.{PWM} on \.{IN1} and \.{LOW}
-on \.{IN2} for forward.
-For reverse, \.{LOW} on \.{IN1} and \.{PWM} on \.{IN2}.
+The odd example in the DBH-01 datasheet has PWM on IN1 and LOW on IN2 for
+forward. For reverse, LOW on IN1 and PWM on IN2.
 
-Rulling out multiple timers (four comparators), additional outputs,
-or a \.{PLD}, the best solution we could find was a adding glue logic.
-A single 74F02 was chosen; a quad \.{NOR}.
-Keeping this solution simple, i.e. one gate-type and on one chip, required that the \.{AVR} outputs be inverted.
+Rulling out multiple timers (four comparators), additional outputs, or a PLD,
+the best solution we could find was a adding glue logic.
+A single 74F02 was chosen; a quad NOR.
+Keeping this solution simple, one gate-type and on one chip, required that the
+AVR outputs be inverted.
 \includegraphics[width=25 pc]{glue.png}a
 This one chip handles the logic for both motors. With this, the AVR outputs
-direction on one pin and \.{PWM} on the other.
-At the H-Bridge, the pin receiving \.{PWM} is selected based on motor
-direction.
-The remaining, non-\.{PWM} pin, is held low.
+direction on one pin and PWM on the other.
+At the H-Bridge, the pin receiving PWM is selected based on motor direction.
+The remaining, non-PWM pin, is held low.
 
 
-\.{OC0A} and \.{OC0B} is on pins 5 and 6  (\.{D8} and \.{D6}) and are the
-\.{PWM}. A fail-safe relay output will be at pin 8.
+OC0A and OC0B is on pins 5 and 6  (D8 and D6) and are the PWM.
+A fail-safe relay output will be at pin 8.
 
 @* Implementation.
-The Futaba receiver has two \.{PWC} channels.
+The Futaba receiver has two PWC channels.
 The pulse-width from the receiver is at 20~ms intervals.
 The on-time ranges from 1000--2000~$\mu$s including trim.
 1500~$\mu$s is the pulse-width for stop.
 The levers cover $\pm$400~$\mu$s and the trim covers the last 100~$\mu$s.
 
 The median time will be subtracted from them for a pair of signed values
-thrust and radius.
-The value will be scaled.
+thrust and radius. The value will be scaled.
 
 The thrust and radius will be translated to power to the
 port and starboard motors.
 When near median the motors will be disabled through a dead-band.
 Stiction in the motor probably wouldn't allow it to move anyway, at this low
-duty-cycle. Both the \.{PWM} and safety relay will open.
+duty-cycle. Both the PWM and safety relay will open.
 The motors will also be disabled when there are no input pulses; in this way
-champ wont run-off if the range is exceeded.
-This function is handled by the watchdog timer.
+champ wont run-off if the range is exceeded. This function is handled by the
+watchdog timer.
 
 The radius control will also be the rotate control, if thrust is zero.
-Timer-Counter 0 is used for the \.{PWM}.
+Timer-Counter 0 is used for the PWM.
 
 The ATmega328 has a 16 bit PWMs with two comparators, Timer 1.
-This has an ``Input Capture Unit'' that may be used for \.{PWC} decoding.
-\.{PWC} being the type of signal from the RC receiver.
+This has an ``Input Capture Unit'' that may be used for PWC decoding.
+PWC being the type of signal from the RC receiver.
 That seems like as elegant a solution as I will find and it is recommended by
 Atmel to use it for this purpose.
 
-The best way to use this nice feature is to take the \.{PWC} signals into
-the \.{MUX}, through the comparator and into the Input Capture Unit.
+The best way to use this nice feature is to
+take the PWC signals into the MUX, through the comparator and into the Input
+Capture Unit.
 
-For the \.{PWC} measurement, this app note, AVR135, is helpful:
+For the PWC measurement, this app note, AVR135, is helpful:
  www.atmel.com/images/doc8014.pdf
 
 
@@ -94,9 +93,8 @@ In fact, channel two's fall is perfectly aligned with channel one's rise.
 This means that it will be possible to capture all of the pulses.
 
 After the two pulses are captured, there's an 18~ms dead-time before the next
-round.
-That's over 250,000 clock cycles.
-This will provide ample time to do math and set the motor \.{PWM}s.
+round. That's over 250,000 clock cycles.
+This will provide ample time to do math and set the motor PWMs.
 
 
 Extensive use was made of the datasheet, Atmel
@@ -105,7 +103,7 @@ Extensive use was made of the datasheet, Atmel
 \vskip 4 pc
 \includegraphics[width=35 pc]{piruett.png}
 
-This is esentialy a boat and so I originaly wanted to use the word ``Port'' for
+This is esentialy a boat and so I originaly wanted to use the word "Port" for
 the left-hand side, when facing the front.
 On a microcontroller that name is used for all of the ports so I chose the
 older word ``larboard''.
@@ -116,7 +114,7 @@ older word ``larboard''.
 @< Prototypes @>@;
 @< Global variables @>@;
 
-@ |"F_CPU"| is used to convey the Trinket Pro clock rate.
+@ |``F_CPU''| is used to convey the Trinket Pro clock rate.
 @d F_CPU 16000000UL
 
 @ Here are some Boolean definitions that are used.
@@ -148,10 +146,10 @@ older word ``larboard''.
 # include <stdint.h>
 
 @ Here is a structure type to keep track of the state of remote-control
-input, e.g. servo timing. Rise and Fall indicate the \.{PWC} edges.
-|"edge"| is set to the edge type expected for the interrupt.
+input, e.g. servo timing. Rise and Fall indicate the PWC edges.
+|``edge''| is set to the edge type expected for the interrupt.
 
-@<Types...@>=
+@<Types@>=
 typedef struct {
     uint16_t ch2rise;
     uint16_t ch2fall;
@@ -165,7 +163,7 @@ typedef struct {
     } inputStruct;
 
 @ Here is a structure type to keep track of the state of translation items.
-@<Types...@>=
+@<Types@>=
 typedef struct {
     int16_t thrust;         // -255 to 255
     int16_t radius;         // -255 to 255
@@ -178,7 +176,7 @@ typedef struct {
    } transStruct;
 
 
-@ @<Prototypes...@>=
+@ @<Prototypes@>=
 void relayCntl(int8_t state);
 void ledCntl(int8_t state);
 void larboardDirection(int8_t state);
@@ -196,7 +194,7 @@ int16_t int16clamp(int16_t value, int16_t min, int16_t max);
 My lone global variable is a function pointer.
 This lets me pass arguments to the actual interrupt handlers and acts a bit
 like a stack of one to store the next action.
-This pointer gets the appropriate function attached by the |"ISR()"| function.
+This pointer gets the appropriate function attached by the |``ISR()''| function.
 
 This input structure is to contain all of the external inputs.
 
@@ -210,16 +208,16 @@ int main(void)
 
 @
 The Futaba receiver leads with channel two, rising edge, so we will start
-looking for that by setting |"edge"| to look for a rise on channel 2.
+looking for that by setting |``edge''| to look for a rise on channel 2.
 
 Center position of the controller results in a count of about 21250, hard
 larboard, or forward, with trim reports about 29100 and hard starboard, or
 reverse, with trim reports about 13400.
 
-About $4 \over 5$ of that range are the full swing of the stick, without trim.
+About 4/5ths of that range are the full swing of the stick, without trim.
 This is from about 14970 and 27530 ticks.
 
-|".minIn"| |".maxIn"| are the endpoints of the normal stick travel.
+|``.minIn''| |".maxIn"| are the endpoints of the normal stick travel.
 The units are raw counnts as the Input Capture Register will use.
 
 At some point a calibration feature could be added which could populate these
@@ -258,28 +256,28 @@ Here the interrupts are disabled so that configuring them doesn't set it off.
 @#
 @
 Any interrupt function requires that bit ``Global Interrupt Enable''
-is set; usually done through calling |"sei()"|.
+is set; usually done through calling |``sei()''|.
 @c
   sei();
 @#
 
 @
 
-The \.{PWM} is used to control larboard and starboard motors through \.{OC0A}
-(D5) and \.{OC0B} (D6), respectivly.
+The PWM is used to control larboard and starboard motors through OC0A (D5) and
+OC0B (D6), respectivly.
 @c
 @<Initialize the Timer Counter 0 for PWM...@>
 
 
 @
 Rather than burning loops, waiting the ballance of 18~ms for something to
-happen, the |"sleep"| mode is used.
-The specific type of sleep is |"idle"|.
-In idle, execution stops but timers, like the Input Capture Unit and \.{PWM}
+happen, the |``sleep''| mode is used.
+The specific type of sleep is |``idle''|.
+In idle, execution stops but timers, like the Input Capture Unit and PWM
 continue to operate.
-Interrupts, either ``Input Capture'' or ``Watchdog'',  are used to wake it up.
+Interrupts, either |Input Capture| or |Watchdog|,  are used to wake it up.
 
-It's important to note that an \.{ISR} procedure must be defined to allow the
+It's important to note that an ISR procedure must be defined to allow the
 program to step past the sleep statement, even if it is empty.
 This stumped me for a good while.
 @c
@@ -290,7 +288,7 @@ This stumped me for a good while.
 ledCntl(OFF);
 
 @
-Since |"edge"| is already set, calling |edgeSelect()| will get it ready for
+Since |``edge''| is already set, calling |edgeSelect()| will get it ready for
 the first rising edge of channel~2.
 Subsequent calls to |edgeSelect| rotates it to the next edge type.
 @c
@@ -307,10 +305,10 @@ interrupt event caused by an edge or watchdog timeout.
   {@#
 
 @
-Now that a loop is started, the \.{PWM} is value and we wait in
-|"idle"| for the edge on the channel selected.
-Each sucessive loop will finish in the same way.
-After three passes |"translation_s"| will have good values.
+Now that a loop is started, the PWM is value and we wait in
+|``idle''| for the edge on the channel selected. Each sucessive loop will finish
+in the same way.
+After three passes |``translation_s''| will have good values.
 
 @c
  setPwm(&translation_s);
@@ -320,9 +318,9 @@ After three passes |"translation_s"| will have good values.
 @
 If execution arrives here, some interrupt has woken it from sleep and some
 vector has possibly run. The possibility is first checked.
-The pointer |"handleIrq"| will be assigned the value of the responsible
+The pointer |``handleIrq''| will be assigned the value of the responsible
 function and then executed.
-After that the \.{IRQ} is nulled so as to avoid repeating the action, should it
+After that the IRQ is nulled so as to avoid repeating the action, should it
 wake-up for some other reason.
 
 
@@ -364,7 +362,7 @@ blocks.
 
 @
 Here is the ISR that fires at each captured edge.
-Escentialy it grabs and processes the ``Input Capture'' data.
+Escentialy it grabs and processes the |Input Capture| data.
 @c
 
 ISR (TIMER1_CAPT_vect)
@@ -373,7 +371,7 @@ ISR (TIMER1_CAPT_vect)
 @#}@#
 
 @
-Here is the \.{ISR} that fires at at about 32 Hz for the main dive tick.
+Here is the ISR that fires at at about 32 Hz for the main dive tick.
 This is used for the dive-control loop.
 @c
 
@@ -386,7 +384,7 @@ ISR (TIMER2_COMPA_vect)
 @
 When the watchdog timer expires, this vector is called.
 This is what happens if the remote's transmitter signal is not received.
-It calls a variant of |"pwcCalc"| that only flips the |"lostSignal"| flag.
+It calls a variant of |``pwcCalc''| that only flips the |``lostSignal''| flag.
 @c
 ISR (WDT_vect)
 @#{@#
@@ -394,12 +392,12 @@ ISR (WDT_vect)
 @#}@#
 
 @
-This procedure computes the durations from the \.{PWC} signal edge capture
-values from the Input Capture Unit.
+This procedure computes the durations from the PWC signal edge capture values
+from the Input Capture Unit.
 With the levers centered the durations should be about 1500~$\mu$s so at
 16~Mhz the count should be near 24000.
 The range should be 17600 to 30400 for 12800 counts, well within the range
-of the $2^{16}$~counts of the 16~bit register.
+of the $2^{16}$ counts of the 16 bit register.
 
 
 @c
@@ -450,8 +448,8 @@ void lostSignal(inputStruct *input_s)
 
 @
 This procedure  will count off ticks for a $1\over 4$ second event.
-Since capture events are guaranteed to have a $\gg$ 1~ms period, or 16000 clock
-cycles, there should be no lost \.{PWC} edges.
+Since capture events are guaranteed to have a >1 ms period, or 16000 clock
+cycles, there should be no lost PWC edges.
 
 @c
 void diveTick(inputStruct *input_s)
@@ -467,7 +465,8 @@ if (!(++tickCount & ~0x80)) // every 128 ticks
 
 
 @
-The procedure edgeSelect configures the |"Input Capture"| unit to capture on
+
+The procedure edgeSelect configures the |``Input Capture''| unit to capture on
 the expected edge type.
 
 @c
@@ -502,14 +501,14 @@ It seems odd but clearing it involves writing a one to it.
 @
 The scaler function takes an input, in time, from the Input Capture
 Register and returns a value scaled by the parameters in structure
-|"inputScale_s"|.
+|``inputScale_s''|.
 @c
 int16_t scaler(inputStruct *input_s, transStruct *trans_s, uint16_t input)
 @#{@#
 uint16_t solution;
 @
 First, we can solve for the obvious cases.
-One is where there is no signal; when |"lostSignal"| is |"TRUE"|.
+One is where there is no signal; when |``lostSignal''| is |``TRUE''|.
 The other is where the input exceeds the range.
 This can easily happen if the trim is shifted.
 @c
@@ -530,7 +529,7 @@ This is not really an efficient method, recomputing gain and offset every time
 but we are not in a rush and it makes it easier since, if something changes,
 I don't have to manualy compute and enter these value.
 
-The constant |"ampFact"| amplifies values for math so I can take advantage of
+The constant |``ampFact''| amplifies values for math so I can take advantage of
 the extra bits for precision.
 
 Dead-band is applied when it returns.
@@ -551,20 +550,20 @@ return (abs(solution) > trans_s->deadBand)?solution:0;
 @#}@#
 
 @
-We need a way to translate |"thrust"| and |"radius"| in order to carve a
- |"turn"|. This procedure should do this but it's not going to be perfect as
+We need a way to translate |``thrust''| and |``radius''| in order to carve a
+ |``turn''|. This procedure should do this but it's not going to be perfect as
 drag and slippage make thrust increase progressivly more than speed.
 Since |speed| is not known, we will use |thrust|.
 It should steer OK as long as the speed is constant and small changes in speed
 should not be too disruptive.
 The sign of larboardOut and starboardOut indicates direction.
-The constant |"ampFact"| amplifies values for math so I can take advantage of
+The constant |``ampFact''| amplifies values for math so I can take advantage of
 the extra bits for precision.
  bits.
 
 This procedure is intended for values from -255 to 255.
 
-|"max"| is set to support the limit of the bridge-driver's charge-pump.
+|``max''| is set to support the limit of the bridge-driver's charge-pump.
 @c
 
 void translate(transStruct *trans_s)
@@ -581,9 +580,8 @@ const int16_t ampFact = 128;
 
 @
 Here we convert desired radius to thrust-difference by scaling to speed.
-Then that difference is converted to rotation by scaling it with |"track"|.
-The radius sensitivity is adjusted by changing the value of |"track"|.
-
+Then that difference is converted to rotation by scaling it with |``track''|.
+The radius sensitivity is adjusted by changing the value of |``track''|.
 @c
  difference = (speed * ((ampFact * trans_s->radius)/UINT8_MAX))/ampFact;
  rotation = (trans_s->track * ((ampFact * difference)/UINT8_MAX))/ampFact;
@@ -595,7 +593,7 @@ At some point, faster is not possible and so the leading motor's thrust is
 clipped.
 
 
-If there is no thrust then it is in piruett mode and spins \.{CW} or \.{CCW}.
+If there is no thrust then it is in piruett mode and spins CW or CCW.
 While thrust is present, piruett mode is locked out.
 Piruett mode has a lock function too, to keep it from hopping into directly
 into thrust mode while it is spinning around.
@@ -621,7 +619,7 @@ For starboard, piruett is reversed, making it rotate counter to larboard.
 
 @
 This procedure sets the signal to the H-Bridge.
-For the \.{PWM} we load the value into the unsigned registers.
+For the PWM we load the value into the unsigned registers.
 @c
 void setPwm(transStruct *trans_s)
 @#{@#
@@ -659,7 +657,7 @@ We must see if the fail-safe relay needs to be closed.
 @#}@#
 
 @
-Here is a simple procedure to flip the \.{LED} on or off.
+Here is a simple procedure to flip the LED on or off.
 @c
 void ledCntl(int8_t state)
 @#{@#
@@ -727,7 +725,7 @@ int16_t int16clamp(int16_t value, int16_t min, int16_t max)
 }
 
 @
-To enable this interrupt, set the \.{ACIE} bit of register \.{ACSR}.
+To enable this interrupt, set the ACIE bit of register ACSR.
 @ @<Initialize the inputs and capture mode...@>=
 {
  // ADCSRA – ADC Control and Status Register A
@@ -759,24 +757,20 @@ To enable this interrupt, set the \.{ACIE} bit of register \.{ACSR}.
 For a timer tick at each $1\over 4$ second. We will use timer counter 2, our
 last timer.
 It only has an 8 bit prescaler so it will be too fast and will need to be
-divided---a lot.
+divided\emdash a lot.
 The prescaler is set to the maximum of 1024.
-The timer is set to \.{CTC} mode so that the time loop is trimable.
+The timer is set to CTC mode so that the time loop is trimable.
 That will be pretty fast so we need more division in software.
 We want to divide by a power of two for efficiency and so 0x80 (0d128) is as
-small as we can go.
-This is also half a |uint8_t| so the math works out very well.
+small as we can go. This is also half a |uint8_t| so the math works out very
+well.
 The time is trimmed to make 128 passes about 0.25 seconds by loading compare
-register, \.{OCR2A}, with 0xf3 (0d243). The interval, with the software
-divisor, is
-$f={f_{CPU}\over{divisor \times 2 \times prescale \times(1+register_{compare})}}$
- or
-${16\times10^6\over{128 \times 2 \times 1024 \times(1+243)}}\approx 0.25 seconds$.
-The interrupt is enabled \.{TIMSK2} for output compare register |"A"|. 
-With all that we will have interrupt \.{TIMER2} \.{COMPA} fire every 31 ms.
+register, OCR2A, with 0xf3 (0d243).
+The interrupt is enabled TIMSK2 for output compare register A. 
+With all that we will have interrupt TIMER2 COMPA fire every 31 ms.
 For the software division we will increment an uint8\_t in the handler on each
 pass and do something at both 0x00 and 0x80 (0d128).
-The test would be |"!(tickCount \& ~0x80)"|. 
+The test would be !(tickCount \& ~0x80). 
 
 @ @<Initialize tick timer...@>=
 {
@@ -789,8 +783,8 @@ TIMSK2 |= (1<<OCIE2A); // Interrupt on a compare match
 
 @
 See section 11.8 in the datasheet for details on the Watchdog Timer.
-This is in the ``Interrupt Mode''.
-When controlled remotlely or in an autonomous dive this should not time-out.
+This is in the ``Interrupt Mode''. When controlled remotlely or in an
+autonomous dive this should not time-out.
 It needs to be long enough to allow for the 0.25 ms autonomous dive loop.
 
 @ @<Initialize watchdog timer...@>=
@@ -802,12 +796,12 @@ It needs to be long enough to allow for the 0.25 ms autonomous dive loop.
 }
 
 @
-\.{PWM} setup isn't too scary.
-Timer Count 0 is configured for ``Phase Correct'' \.{PWM} which, according to
-the datasheet, is preferred for motor control.
-\.{OC0A} (port) and \.{OC0B} (starboard) are used for \.{PWM}.
-The prescaler is set to clk/8 and with a 16 MHz clock the $f$ is about 3922~Hz.
-We are using |"Set"| on comparator match to invert the \.{PWM}, suiting the
+PWM setup isn't too scary.
+Timer Count 0 is configured for ``Phase Correct'' PWM which, according to the
+datasheet, is preferred for motor control.
+OC0A (port) and OC0B (starboard) are used for PWM.
+The prescaler is set to clk/8 and with a 16 MHz clock the $f$ is about 3922 Hz.
+We are using |``Set''| on comparator match to invert the PWM, suiting the
 glue-logic  which drives the H-Bridge.
 @ @<Initialize the Timer Counter 0 for PWM...@>=
 {
