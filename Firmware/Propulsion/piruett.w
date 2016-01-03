@@ -137,9 +137,10 @@ older word ``larboard''.
 @d CH2FALL 1   // falling edge of RC's remote channel 2
 @d CH1FALL 2   // falling edge of RC's remote channel 1
 @d MAX_DUTYCYCLE 98 // 98\% to support charge pump of bridge-driver
-@d SURFACED 0  // the mode of being surfaced
-@d DIVING 1    // the mode of actively diving
-@d SUBMERGED 2 //the mode of being submerged
+@d OFF 0  // the mode of being surfaced
+@d REMOTE 1  // the mode of being surfaced
+@d DIVING 2    // the mode of actively diving
+@d SUBMERGED 3 //the mode of being submerged
 
 @ @<Include...@>=
 # include <avr/io.h> // need some port access
@@ -161,7 +162,7 @@ typedef struct {
     uint16_t ch1duration;
     uint16_t ch2duration;
     uint8_t  edge;
-    uint8_t  lostSignal;
+    uint8_t  controlMode;
     const uint16_t minIn;    // input, minimum
     const uint16_t maxIn;    // input, maximum
     } inputStruct;
@@ -185,7 +186,6 @@ typedef struct {
 typedef struct {
     uint16_t diveTime; // 0.25 sec intervals allowed before it gets canceled
     uint16_t submergeTime; // 0.25 sec intervals to remain at depth
-    uint8_t mode; // SURFACE, DIVING or SUBMERGED are the modes
     } diveStruct;
 
 
@@ -243,7 +243,7 @@ inputStruct input_s = {
     .edge = CH2RISE,
     .minIn = 14970,
     .maxIn = 27530,
-    .lostSignal = TRUE
+    .controlMode = OFF
     };
 
 
@@ -397,7 +397,7 @@ ISR (TIMER2_COMPA_vect)
 @
 When the watchdog timer expires, this vector is called.
 This is what happens if the remote's transmitter signal is not received.
-It calls a variant of |"pwcCalc"| that only flips the |"lostSignal"| flag.
+It calls a variant of |"pwcCalc"| that only sets the controlMode to OFF.
 @c
 ISR (WDT_vect)
 @#{@#
@@ -441,7 +441,7 @@ the flag and resets the watchdog timer.
          input_s->ch1fall = ICR1;
          input_s->ch1duration = input_s->ch1fall - input_s->ch2fall;
          input_s->edge = CH2RISE;
-         input_s->lostSignal = FALSE;
+         if(input_s->controlMode == OFF) input_s->controlMode = REMOTE; 
          wdt_reset(); /* watchdog timer is reset at each edge capture */
 @t\hskip 1in@>  }
 
@@ -453,7 +453,7 @@ This procedure sets output to zero in the event of a lost signal.
 @c
 void lostSignal(inputStruct *input_s)
 @#{@#
- input_s->lostSignal = TRUE;
+ input_s->controlMode = OFF;
  input_s->edge = CH2RISE;
 
  edgeSelect(input_s);
@@ -471,7 +471,6 @@ static uint8_t tickCount = 0;
 
 if (!(++tickCount & ~128U)) // every 128 ticks
     {
-     input_s->lostSignal = FALSE;
      wdt_reset(); /* watchdog timer is reset */
     }
 
@@ -521,11 +520,11 @@ int16_t scaler(inputStruct *input_s, transStruct *trans_s, uint16_t input)
 uint16_t solution;
 @
 First, we can solve for the obvious cases.
-One is where there is no signal; when |"lostSignal"| is |"TRUE"|.
+One is where there is no signal; when |"controlMode"| is |"OFF"|.
 The other is where the input exceeds the range.
 This can easily happen if the trim is shifted.
 @c
-  if (input_s->lostSignal == TRUE)
+  if (input_s->controlMode == OFF)
      return 0;
 
   if (input > input_s->maxIn)
