@@ -16,15 +16,16 @@
 #define CH2FALL 1
 #define CH1FALL 2
 #define MAX_DUTYCYCLE 98
-#define SURFACED 0
-#define DIVING 1
-#define SUBMERGED 2 \
+#define OFF 0
+#define REMOTE 1
+#define DIVING 2
+#define SUBMERGED 3 \
 
 /*2:*/
 #line 113 "./piruett.w"
 
 /*6:*/
-#line 144 "./piruett.w"
+#line 145 "./piruett.w"
 
 # include <avr/io.h>  
 # include <avr/interrupt.h>  
@@ -37,7 +38,7 @@
 #line 114 "./piruett.w"
 
 /*7:*/
-#line 156 "./piruett.w"
+#line 157 "./piruett.w"
 
 typedef struct{
 uint16_t ch2rise;
@@ -46,13 +47,13 @@ uint16_t ch1fall;
 uint16_t ch1duration;
 uint16_t ch2duration;
 uint8_t edge;
-uint8_t lostSignal;
+uint8_t controlMode;
 const uint16_t minIn;
 const uint16_t maxIn;
 }inputStruct;
 
 /*:7*//*8:*/
-#line 170 "./piruett.w"
+#line 171 "./piruett.w"
 
 typedef struct{
 int16_t thrust;
@@ -66,12 +67,11 @@ const int8_t deadBand;
 }transStruct;
 
 /*:8*//*9:*/
-#line 184 "./piruett.w"
+#line 185 "./piruett.w"
 
 typedef struct{
 uint16_t diveTime;
 uint16_t submergeTime;
-uint8_t mode;
 }diveStruct;
 
 
@@ -119,7 +119,7 @@ inputStruct input_s= {
 .edge= CH2RISE,
 .minIn= 14970,
 .maxIn= 27530,
-.lostSignal= TRUE
+.controlMode= OFF
 };
 
 
@@ -175,7 +175,7 @@ ADMUX&= ~((1<<MUX2)|(1<<MUX1)|(1<<MUX0));
 {
 TCCR2B|= (1<<CS22)|(1<<CS21)|(1<<CS20);
 TCCR2A|= (1<<WGM21);
-OCR2A= 0xf3;
+OCR2A= 243U;
 TIMSK2|= (1<<OCIE2A);
 }
 
@@ -371,7 +371,7 @@ case CH1FALL:
 input_s->ch1fall= ICR1;
 input_s->ch1duration= input_s->ch1fall-input_s->ch2fall;
 input_s->edge= CH2RISE;
-input_s->lostSignal= FALSE;
+if(input_s->controlMode==OFF)input_s->controlMode= REMOTE;
 wdt_reset();
 }
 
@@ -383,7 +383,7 @@ edgeSelect(input_s);
 
 void lostSignal(inputStruct*input_s)
 {
-input_s->lostSignal= TRUE;
+input_s->controlMode= OFF;
 input_s->edge= CH2RISE;
 
 edgeSelect(input_s);
@@ -396,9 +396,9 @@ void diveTick(inputStruct*input_s)
 {
 static uint8_t tickCount= 0;
 
-if(!(++tickCount&~0x80))
+if(!(++tickCount&~128U))
 {
-
+wdt_reset();
 }
 
 }
@@ -441,7 +441,7 @@ uint16_t solution;
 /*:34*//*35:*/
 #line 526 "./piruett.w"
 
-if(input_s->lostSignal==TRUE)
+if(input_s->controlMode==OFF)
 return 0;
 
 if(input> input_s->maxIn)
