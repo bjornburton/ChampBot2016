@@ -138,17 +138,19 @@ transStruct translation_s= {
 cli();
 
 /*51:*/
-#line 742 "./piruett.w"
+#line 747 "./piruett.w"
 
 {
 
 ADCSRA&= ~(1<<ADEN);
+ADCSRA&= ~((1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0));
+ADCSRA&= ~(1<<ADIE);
 
 
 ADCSRB|= (1<<ACME);
 
 
-DIDR0|= ((1<<AIN1D)|(1<<AIN0D));
+DIDR0|= ((1<<ADC2D)|(1<<ADC1D)|(1<<ADC0D));
 
 
 ACSR|= (1<<ACBG);
@@ -164,13 +166,15 @@ TCCR1B|= (1<<CS10);
 
 
 ADMUX&= ~((1<<MUX2)|(1<<MUX1)|(1<<MUX0));
+ADMUX&= ~(1<<REFS0);
+
 }
 
 /*:51*/
 #line 265 "./piruett.w"
 
 /*53:*/
-#line 792 "./piruett.w"
+#line 801 "./piruett.w"
 
 {
 TCCR2B|= (1<<CS22)|(1<<CS21)|(1<<CS20);
@@ -205,7 +209,7 @@ DDRD|= ((1<<DDD3)|(1<<DDD4));
 #line 267 "./piruett.w"
 
 /*55:*/
-#line 807 "./piruett.w"
+#line 816 "./piruett.w"
 
 {
 
@@ -228,7 +232,7 @@ sei();
 #line 281 "./piruett.w"
 
 /*57:*/
-#line 823 "./piruett.w"
+#line 832 "./piruett.w"
 
 {
 
