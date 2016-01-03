@@ -11,7 +11,7 @@
 2016 Champbot.
 It features separate thrust and steering, including piruett turning. Also an
 autonomous dive function has been added.
-  
+
 This will facilitate motion by taking ``thrust'' and ``radius'' pulse-width,
 or \.{PWC}, inputs from the Futaba-Kyosho \.{RC} receiver and converting them
 to the appropriate motor actions.
@@ -85,7 +85,7 @@ For the \.{PWC} measurement, this app note, AVR135, is helpful:
  www.atmel.com/images/doc8014.pdf
 
 
-In the datasheet, this section is helpful: 16.6.3
+In the datasheet, section 16.6.3 is helpful.
 
 An interesting thing about this Futaba receiver is that the pulses are in
 series.
@@ -185,7 +185,7 @@ typedef struct {
 typedef struct {
     uint16_t diveTime; // 0.25 sec intervals allowed before it gets canceled
     uint16_t submergeTime; // 0.25 sec intervals to remain at depth
-    uint8_t mode; // SURFACE, DIVING or SUBMERGED are the modes 
+    uint8_t mode; // SURFACE, DIVING or SUBMERGED are the modes
     } diveStruct;
 
 
@@ -301,9 +301,9 @@ This stumped me for a good while.
 ledCntl(OFF);
 
 @
-Since |"edge"| is already set, calling |edgeSelect()| will get it ready for
+Since |"edge"| is already set, calling |"edgeSelect()"| will get it ready for
 the first rising edge of channel~2.
-Subsequent calls to |edgeSelect| rotates it to the next edge type.
+Subsequent calls to |"edgeSelect"| rotates it to the next edge type.
 @c
 edgeSelect(&input_s);
 
@@ -469,16 +469,17 @@ void diveTick(inputStruct *input_s)
 @#{@#
 static uint8_t tickCount = 0;
 
-if (!(++tickCount & ~0x80)) // every 128 ticks
+if (!(++tickCount & ~128U)) // every 128 ticks
     {
-
+     input_s->lostSignal = FALSE;
+     wdt_reset(); /* watchdog timer is reset */
     }
 
 @#}@#
 
 
 @
-The procedure edgeSelect configures the |"Input Capture"| unit to capture on
+The procedure edgeSelect configures the ``Input Capture'' unit to capture on
 the expected edge type.
 
 @c
@@ -774,26 +775,26 @@ divided---a lot.
 The prescaler is set to the maximum of 1024.
 The timer is set to \.{CTC} mode so that the time loop is trimable.
 That will be pretty fast so we need more division in software.
-We want to divide by a power of two for efficiency and so 0x80 (0d128) is as
-small as we can go.
-This is also half a |uint8_t| so the math works out very well.
-The time is trimmed to make 128 passes about 0.25 seconds by loading compare
-register, \.{OCR2A}, with 0xf3 (0d243). The interval, with the software
+We want to divide by a power of two so we can use a simple compare, and no
+resets. A divisor of 128 looks perfect since it is a small as we can go and
+still fit the ticks in the small 8 bit timer.
+The time is trimmed to make 128 passes close to 0.25 seconds by loading compare
+register, \.{OCR2A}, with 243. The interval, with the software
 divisor, is
 $f={f_{CPU}\over{divisor \times 2 \times prescale \times(1+register_{compare})}}$
  or
 ${16\times10^6\over{128 \times 2 \times 1024 \times(1+243)}}\approx 0.25 seconds$.
-The interrupt is enabled \.{TIMSK2} for output compare register |"A"|. 
+The interrupt is enabled \.{TIMSK2} for output compare register |"A"|.
 With all that we will have interrupt \.{TIMER2} \.{COMPA} fire every 31 ms.
 For the software division we will increment an uint8\_t in the handler on each
-pass and do something at both 0x00 and 0x80 (0d128).
-The test would be |"!(tickCount \& ~0x80)"|. 
+pass and do something at both 0 and 128.
+The test could look a bit like this: |"!(++tickCount \& ~128U)"|.
 
 @ @<Initialize tick timer...@>=
 {
 TCCR2B |= (1<<CS22) | (1<<CS21) | (1<<CS20); // maximum prescale (see 18.11.2)
 TCCR2A |= (1<<WGM21); // CTC mode (see 18.11.1)
-OCR2A = 0xf3; // Do I need to make this clearer?
+OCR2A = 243U; // Do I need to make this clearer?
 TIMSK2 |= (1<<OCIE2A); // Interrupt on a compare match
 }
 
