@@ -738,17 +738,24 @@ int16_t int16clamp(int16_t value, int16_t min, int16_t max)
 }
 
 @
-To enable this interrupt, set the \.{ACIE} bit of register \.{ACSR}.
+This section configures the analog section for both analog and input capture
+through the MUX.
+Since the MUX is used AIN1 and AIN0 may still be used for digital data. 
+Default is ICR on channel 0 but by setting the MUX to channel 2 and
+clearing ADEN, an ADC conversion will occour on the next idle.
+Conversion will take about 191~$\mu$s and will complete with an interrupt.
 @ @<Initialize the inputs and capture mode...@>=
 {
  // ADCSRA – ADC Control and Status Register A
  ADCSRA &= ~(1<<ADEN); // Conn the MUX to (-) input of comparator (sec 23.2)
-
+ ADCSRA &= ~((1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)); // prescaler to 128
+ ADCSRA &= ~(1<<ADIE); // ADC to interrupt on completion
+ 
  // 23.3.1 ADCSRB – ADC Control and Status Register B
  ADCSRB |= (1<<ACME);  // Conn the MUX to (-) input of comparator (sec 23.2)
 
  // 24.9.5 DIDR0 – Digital Input Disable Register 0
- DIDR0  |= ((1<<AIN1D)|(1<<AIN0D)); // Disable digital inputs (sec 24.9.5)
+ DIDR0  |= ((1<<ADC2D)|(1<<ADC1D)|(1<<ADC0D)); // Disable din (sec 24.9.5)
 
  // 23.3.2 ACSR – Analog Comparator Control and Status Register
  ACSR   |= (1<<ACBG);  // Connect + input to the band-gap ref (sec 23.3.2)
@@ -763,7 +770,9 @@ To enable this interrupt, set the \.{ACIE} bit of register \.{ACSR}.
  TCCR1B |= (1<<CS10);  // No Prescale. Just count the main clock (sec 16.11.2)
 
  // 24.9.1 ADMUX – ADC Multiplexer Selection Register
- ADMUX &= ~((1<<MUX2) | (1<<MUX1) | (1<<MUX0)); // Set to mux channel 0
+ ADMUX &= ~((1<<MUX2)|(1<<MUX1)|(1<<MUX0)); // Set to mux channel 0
+ ADMUX &= ~(1<<REFS0); // Set ADC to use VREF 
+ 
 }
 
 @
