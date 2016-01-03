@@ -163,6 +163,7 @@ typedef struct {
     uint16_t ch2duration;
     uint8_t  edge;
     uint8_t  controlMode;
+    uint16_t pressure; // pressure in ADC units
     const uint16_t minIn;    // input, minimum
     const uint16_t maxIn;    // input, maximum
     } inputStruct;
@@ -194,6 +195,7 @@ void relayCntl(int8_t state);
 void ledCntl(int8_t state);
 void larboardDirection(int8_t state);
 void starboardDirection(int8_t state);
+void pressureCalc(inputStruct *);
 void diveTick(inputStruct *);
 void pwcCalc(inputStruct *);
 void edgeSelect(inputStruct *);
@@ -288,7 +290,10 @@ happen, the |"sleep"| mode is used.
 The specific type of sleep is |"idle"|.
 In idle, execution stops but timers, like the Input Capture Unit and \.{PWM}
 continue to operate.
-Interrupts, either ``Input Capture'' or ``Watchdog'',  are used to wake it up.
+Another thing that will happen during sleep is an \.{ADC} conversion from the
+pressure sensor.
+Interrupts ``Input Capture'', ``tick'', ``\.{ADC}'' and ``Watchdog'',
+are used to wake it up.
 
 It's important to note that an \.{ISR} procedure must be defined to allow the
 program to step past the sleep statement, even if it is empty.
@@ -393,6 +398,16 @@ ISR (TIMER2_COMPA_vect)
  handleIrq = &diveTick;
 @#}@#
 
+@
+Here is the \.{ISR} that fires after a successful \.{ADC} conversion.
+The \.{ADC} is used to determine depth from pressure.
+@c
+
+ISR (ADC_vect)
+@#{@#
+ handleIrq = &pressureCalc;
+@#}@#
+
 
 @
 When the watchdog timer expires, this vector is called.
@@ -469,10 +484,43 @@ void diveTick(inputStruct *input_s)
 @#{@#
 static uint8_t tickCount = 0;
 
+
+if (input_s->edge == CH2RISE) // while timing isn't too critical
+   {
+    ADCSRA |= (1<<ADEN); // Connect the MUX to the ADC and enable it 
+    ADMUX = (ADMUX & 0xf0)|2U; // Set MUX to channel 2
+   }
+
 if (!(++tickCount & ~128U)) // every 128 ticks
     {
      wdt_reset(); /* watchdog timer is reset */
     }
+
+@#}@#
+
+
+@
+This procedure will filter \.{ADC} results for a pressure in terms of \.{ADC}
+units. First the comparator is reconnected.
+There is a moving average filter of size 32.
+That size is efficient since the division is a binary left shift of 5 places. 
+
+@c
+void pressureCalc(inputStruct *input_s)
+@#{@#
+ static uint16_t buffStart[33];
+ const  uint16_t *buffEnd = buffStart+33;
+ static uint16_t *buffIndex = buffStart;
+ static uint32_t sum;
+
+ ADCSRA &= ~(1<<ADEN); // reconnect the MUX to the comparator 
+
+ *buffIndex = ADCL & ((uint16_t)ADCH)<<8; // drop in the ADC value
+ sum += *buffIndex; // include this new find in the sum
+ buffIndex = (buffIndex != buffEnd)?buffIndex+1:buffStart;
+ sum -= *buffIndex; // remove the oldest item
+ 
+ input_s->pressure = (uint16_t)(sum<<5);
 
 @#}@#
 
@@ -488,15 +536,15 @@ void edgeSelect(inputStruct *input_s)
   switch(input_s->edge)
      {
    case CH2RISE: /* To wait for rising edge on servo-channel 2 */
-      ADMUX |= (1<<MUX0); /* Set to mux channel 1 */
+      ADMUX = (ADMUX & 0xf0)|1U;  /* Set to mux channel 1 */
       TCCR1B |= (1<<ICES1);  /* Rising edge (23.3.2) */
     break;
    case CH2FALL:
-      ADMUX |= (1<<MUX0); /* Set to mux channel 1 */
+      ADMUX = (ADMUX & 0xf0)|1U;; /* Set to mux channel 1 */
       TCCR1B &= ~(1<<ICES1);  /* Falling edge (23.3.2) */
     break;
    case CH1FALL:
-      ADMUX &= ~(1<<MUX0); /* Set to mux channel 0 */
+      ADMUX = (ADMUX & 0xf0)|0U; /* Set to mux channel 0 */
       TCCR1B &= ~(1<<ICES1);  /* Falling edge (23.3.2) */
    }
 @
@@ -770,7 +818,7 @@ Conversion will take about 191~$\mu$s and will complete with an interrupt.
  TCCR1B |= (1<<CS10);  // No Prescale. Just count the main clock (sec 16.11.2)
 
  // 24.9.1 ADMUX – ADC Multiplexer Selection Register
- ADMUX &= ~((1<<MUX2)|(1<<MUX1)|(1<<MUX0)); // Set to mux channel 0
+ ADMUX = (ADMUX & 0xf0) | 0U; // Set to mux channel 0
  ADMUX &= ~(1<<REFS0); // Set ADC to use VREF 
  
 }
