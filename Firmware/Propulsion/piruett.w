@@ -563,12 +563,12 @@ return (abs(solution) > trans_s->deadBand)?solution:0;
 
 @
 We need a way to translate |"thrust"| and |"radius"| in order to carve a
- |"turn"|. This procedure should do this but it's not going to be perfect as
+turn. This procedure should do this but it's not going to be perfect as
 drag and slippage make thrust increase progressivly more than speed.
-Since |speed| is not known, we will use |thrust|.
+Since the true speed is not known, we will use thrust.
 It should steer OK as long as the speed is constant and small changes in speed
 should not be too disruptive.
-The sign of larboardOut and starboardOut indicates direction.
+The sign of |"larboardOut"| and |"starboardOut"| indicates direction.
 The constant |"ampFact"| amplifies values for math so I can take advantage of
 the extra bits for precision.
  bits.
