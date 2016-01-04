@@ -502,8 +502,8 @@ if (!(++tickCount & ~128U)) // every 128 ticks
 @
 This procedure will filter \.{ADC} results for a pressure in terms of \.{ADC}
 units. First the comparator is reconnected.
-There is a moving average filter of size 32.
-That size is efficient since the division is a binary left shift of 5 places. 
+There is a moving average filter of size 32 or about 1 second in size.
+That size is efficient since the division is a binary right shift of 5 places. 
 
 @c
 void pressureCalc(inputStruct *input_s)
@@ -520,7 +520,7 @@ void pressureCalc(inputStruct *input_s)
  buffIndex = (buffIndex != buffEnd)?buffIndex+1:buffStart;
  sum -= *buffIndex; // remove the oldest item
  
- input_s->pressure = (uint16_t)(sum<<5);
+ input_s->pressure = (uint16_t)(sum>>5);
 
 @#}@#
 
