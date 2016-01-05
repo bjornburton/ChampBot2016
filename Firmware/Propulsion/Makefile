@@ -27,6 +27,7 @@ TANGLE    := ctangle
 WEAVE     := cweave
 TEX       := pdftex
 CFLAGS    :=  -std=c11 -g -mmcu=$(MCU) -Wall -Os -pedantic -fdump-rtl-expand
+AFLAGS    :=  -S
 CONV      :=avr-objcopy
 CONVFLAGS := -j .text -j .data -O ihex
 LIBS      :=
@@ -46,7 +47,6 @@ TEXSRC   := $(TARGET).tex
 DOTSRC   := $(TARGET).dot
 EGYPTSRC := $(TARGET).c.*r.expand
 GRAPH    := $(TARGET).png
-
 
 # The usual make stuff
 default: $(HEX)
@@ -87,6 +87,7 @@ clean:
 	-rm -f $(CSOURCES)
 	-rm -f $(DOTSRC)
 	-rm -f $(EGYPTSRC)
+	-rm -f $(TARGET).s
 	
 install:
 	$(PROGSW) $(PROGSWFLAGS) -c usbtiny -U flash:w:$(HEX)
@@ -100,3 +101,5 @@ size:
 fuse:
 	$(PROGSW) $(PROGSWFLAGS) -u -U $(LFUSE)  -U $(HFUSE) -U $(EFUSE)
  
+assy:
+	$(CC) -c $(CFLAGS) $(AFLAGS) $(CSOURCES)

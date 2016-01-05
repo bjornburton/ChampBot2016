@@ -335,7 +335,7 @@ After three passes |"translation_s"| will have good values.
 
 @
 If execution arrives here, some interrupt has woken it from sleep and some
-vector has possibly run. The possibility is first checked.
+vector has possibly run. That possibility is first checked.
 The pointer |"handleIrq"| will be assigned the value of the responsible
 function and then executed.
 After that the \.{IRQ} is nulled so as to avoid repeating the action, should it
@@ -354,10 +354,11 @@ translation_s.radius = scaler(&input_s, &translation_s, input_s.ch1duration);
 translation_s.thrust = scaler(&input_s, &translation_s, input_s.ch2duration);
 translation_s.track = 100; /* represents unit-less prop-to-prop distance */
 
-translate(&translation_s);
-
+if (input_s.controlMode == REMOTE )
+   translate(&translation_s);
+   
 @
-The LED is used to indicate both channels PWM's are zeros.
+The LED is used to indicate when both channels PWM's are zeros.
 @c
 if(translation_s.larboardOut || translation_s.starboardOut)
     ledCntl(OFF);
@@ -389,7 +390,7 @@ ISR (TIMER1_CAPT_vect)
 @#}@#
 
 @
-Here is the \.{ISR} that fires at at about 32 Hz for the main dive tick.
+Here is the \.{ISR} that fires at at about 64 Hz for the main dive tick.
 This is used for the dive-control loop.
 @c
 
@@ -437,7 +438,7 @@ and then set the edge index for the next edge.
 Channel 2 leads so that rise is first.
 
 Arrival at the last case establishes that there was a signal, clears
-the flag and resets the watchdog timer.
+the flag.
 @c
 
 
@@ -457,7 +458,6 @@ the flag and resets the watchdog timer.
          input_s->ch1duration = input_s->ch1fall - input_s->ch2fall;
          input_s->edge = CH2RISE;
          if(input_s->controlMode == OFF) input_s->controlMode = REMOTE; 
-         wdt_reset(); /* watchdog timer is reset at each edge capture */
 @t\hskip 1in@>  }
 
 edgeSelect(input_s);
@@ -476,14 +476,14 @@ void lostSignal(inputStruct *input_s)
 
 @
 This procedure  will count off ticks for a $1\over 4$ second event.
-Since capture events are guaranteed to have a $\gg$ 1~ms period, or 16000 clock
-cycles, there should be no lost \.{PWC} edges.
+Every tick it will setup ADC to get pressure sensor values during idle.
 
 @c
 void diveTick(inputStruct *input_s)
 @#{@#
 static uint8_t tickCount = 0;
 
+// we are here 64 times per second
 
 if (input_s->edge == CH2RISE) // while timing isn't too critical
    {
@@ -491,8 +491,15 @@ if (input_s->edge == CH2RISE) // while timing isn't too critical
     ADMUX = (ADMUX & 0xf0)|2U; // Set MUX to channel 2
    }
 
-if (!(++tickCount & ~128U)) // every 128 ticks
+if (!(++tickCount)) // every 256 ticks
     {
+     if (input_s->controlMode >= DIVING)
+   // create a trasnstruct
+  // fill it
+   // call setPwm
+   // do the PI stuff here? 
+     ;
+
      wdt_reset(); /* watchdog timer is reset */
     }
 
@@ -501,9 +508,13 @@ if (!(++tickCount & ~128U)) // every 128 ticks
 
 @
 This procedure will filter \.{ADC} results for a pressure in terms of \.{ADC}
-units. First the comparator is reconnected.
-There is a moving average filter of size 32 or about 1 second in size.
+units. First the comparator is reconnected to the \.{MUX} so that we miss as few
+RC events as possible.
+There is a moving average filter of size 32 or about $1 \over 2$ second in
+size.
 That size is efficient since the division is a binary right shift of 5 places. 
+Since the \.{ADC} is a mere 10 bits, and $2^{10} \times 32$ is only $2^{15}$,
+the sum may safely be of size |"uint16_t"|.
 
 @c
 void pressureCalc(inputStruct *input_s)
@@ -511,16 +522,16 @@ void pressureCalc(inputStruct *input_s)
  static uint16_t buffStart[33];
  const  uint16_t *buffEnd = buffStart+33;
  static uint16_t *buffIndex = buffStart;
- static uint32_t sum;
+ static uint16_t sum; // range 0 to 32768 
 
  ADCSRA &= ~(1<<ADEN); // reconnect the MUX to the comparator 
 
  *buffIndex = ADCL & ((uint16_t)ADCH)<<8; // drop in the ADC value
  sum += *buffIndex; // include this new find in the sum
  buffIndex = (buffIndex != buffEnd)?buffIndex+1:buffStart;
- sum -= *buffIndex; // remove the oldest item
+ sum -= *buffIndex; // remove the oldest item from the sum
  
- input_s->pressure = (uint16_t)(sum>>5);
+ input_s->pressure = (sum>>5);
 
 @#}@#
 
@@ -540,7 +551,7 @@ void edgeSelect(inputStruct *input_s)
       TCCR1B |= (1<<ICES1);  /* Rising edge (23.3.2) */
     break;
    case CH2FALL:
-      ADMUX = (ADMUX & 0xf0)|1U;; /* Set to mux channel 1 */
+      ADMUX = (ADMUX & 0xf0)|1U; /* Set to mux channel 1 */
       TCCR1B &= ~(1<<ICES1);  /* Falling edge (23.3.2) */
     break;
    case CH1FALL:
@@ -678,6 +689,8 @@ For starboard, piruett is reversed, making it rotate counter to larboard.
     }
 @#}@#
 
+
+
 @
 This procedure sets the signal to the H-Bridge.
 For the \.{PWM} we load the value into the unsigned registers.
@@ -787,10 +800,11 @@ int16_t int16clamp(int16_t value, int16_t min, int16_t max)
 
 @
 This section configures the analog section for both analog and input capture
-through the MUX.
-Since the MUX is used AIN1 and AIN0 may still be used for digital data. 
-Default is ICR on channel 0 but by setting the MUX to channel 2 and
-clearing ADEN, an ADC conversion will occour on the next idle.
+through the \.{MUX}.
+Since the \.{MUX} is used \.{AIN1} and \.{AIN0} may still be used for digital
+data. 
+Default is \.{ICR} on channel 0 but by setting the MUX to channel 2 and
+clearing \.{ADEN}, an ADC conversion will occour on the next idle.
 Conversion will take about 191~$\mu$s and will complete with an interrupt.
 @ @<Initialize the inputs and capture mode...@>=
 {
@@ -832,19 +846,20 @@ The prescaler is set to the maximum of 1024.
 The timer is set to \.{CTC} mode so that the time loop is trimable.
 That will be pretty fast so we need more division in software.
 We want to divide by a power of two so we can use a simple compare, and no
-resets. A divisor of 128 looks perfect since it is a small as we can go and
+resets. A divisor of 256 looks perfect since it is a small as we can go and
 still fit the ticks in the small 8 bit timer.
-The time is trimmed to make 128 passes close to 0.25 seconds by loading compare
+The time is trimmed to make 256 passes close to 0.25 seconds by loading compare
 register, \.{OCR2A}, with 243. The interval, with the software
 divisor, is
-$f={f_{CPU}\over{divisor \times 2 \times prescale \times(1+register_{compare})}}$
+$f={f_{CPU}\over{divisor \times prescale \times(1+register_{compare})}}$
  or
-${16\times10^6\over{128 \times 2 \times 1024 \times(1+243)}}\approx 0.25 seconds$.
+${16\times10^6\over{256 \times 1024 \times(1+243)}}\approx 0.25 seconds$.
 The interrupt is enabled \.{TIMSK2} for output compare register |"A"|.
 With all that we will have interrupt \.{TIMER2} \.{COMPA} fire every 31 ms.
 For the software division we will increment an uint8\_t in the handler on each
 pass and do something at both 0 and 128.
-The test could look a bit like this: |"!(++tickCount \& ~128U)"|.
+The test could look a bit like |"!(++tickCount \& ~"|divisor|"U)"| except at
+256; but we are at 256 so |"!(++tickCount")| will do. 
 
 @ @<Initialize tick timer...@>=
 {
