@@ -150,8 +150,8 @@ older word ``larboard''.
 # include <stdlib.h>
 # include <stdint.h>
 
-@ Here is a structure type to keep track of the state of remote-control
-input, e.g. servo timing. Rise and Fall indicate the \.{PWC} edges.
+@ Here is a structure type to keep track of the state of 
+inputs, e.g. servo timing. Rise and Fall indicate the \.{PWC} edges.
 |"edge"| is set to the edge type expected for the interrupt.
 
 @<Types...@>=
@@ -200,7 +200,7 @@ void diveTick(inputStruct *);
 void pwcCalc(inputStruct *);
 void edgeSelect(inputStruct *);
 void translate(transStruct *);
-void setPwm(transStruct *);
+void setPwm(int16_t, int16_t);
 void lostSignal(inputStruct *);
 int16_t scaler(inputStruct *, transStruct *, uint16_t input);
 int16_t int16clamp(int16_t value, int16_t min, int16_t max);
@@ -329,7 +329,7 @@ Each sucessive loop will finish in the same way.
 After three passes |"translation_s"| will have good values.
 
 @c
- setPwm(&translation_s);
+ setPwm(translation_s.larboardOut, translation_s.starboardOut);
 
  sleep_mode();
 
@@ -495,7 +495,7 @@ if (!(++tickCount)) // every 256 ticks
     {
      if (input_s->controlMode >= DIVING)
    // create a trasnstruct
-  // fill it
+   // fill it
    // call setPwm
    // do the PI stuff here? 
      ;
@@ -695,35 +695,35 @@ For starboard, piruett is reversed, making it rotate counter to larboard.
 This procedure sets the signal to the H-Bridge.
 For the \.{PWM} we load the value into the unsigned registers.
 @c
-void setPwm(transStruct *trans_s)
+void setPwm(int16_t larboardOut, int16_t starboardOut)
 @#{@#
 
- if (trans_s->larboardOut >= 0)
+ if (larboardOut >= 0)
      {
       larboardDirection(FORWARD);
-      OCR0A = abs(trans_s->larboardOut);
+      OCR0A = abs(larboardOut);
      }
   else
       {
        larboardDirection(REVERSE);
-       OCR0A = abs(trans_s->larboardOut);
+       OCR0A = abs(larboardOut);
       }
 
- if (trans_s->starboardOut >= 0)
+ if (starboardOut >= 0)
      {
       starboardDirection(FORWARD);
-      OCR0B = abs(trans_s->starboardOut);
+      OCR0B = abs(starboardOut);
      }
   else
       {
        starboardDirection(REVERSE);
-       OCR0B = abs(trans_s->starboardOut);
+       OCR0B = abs(starboardOut);
       }
 
 @
 We must see if the fail-safe relay needs to be closed.
 @c
- if (trans_s->larboardOut || trans_s->starboardOut)
+ if (larboardOut || starboardOut)
     relayCntl(CLOSED);
   else
     relayCntl(OPEN);
