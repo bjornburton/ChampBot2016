@@ -176,8 +176,6 @@ typedef struct {
     int16_t track;          //    1 to 255
     int16_t starboardOut;   // -255 to 255
     int16_t larboardOut;    // -255 to 255
-    const int16_t minOut;   // output, minimum
-    const int16_t maxOut;   // output, maximum
     const int8_t  deadBand; // width of zero in terms of output units
    } transStruct;
 
@@ -187,6 +185,8 @@ typedef struct {
 typedef struct {
     uint16_t diveTime; // 0.25 sec intervals allowed before it gets canceled
     uint16_t submergeTime; // 0.25 sec intervals to remain at depth
+    int16_t starboardOut;   // -255 to 255
+    int16_t larboardOut;    // -255 to 255
     } diveStruct;
 
 
@@ -202,7 +202,8 @@ void edgeSelect(inputStruct *);
 void translate(transStruct *);
 void setPwm(int16_t, int16_t);
 void lostSignal(inputStruct *);
-int16_t scaler(inputStruct *, transStruct *, uint16_t input);
+int16_t scaler(uint16_t input, uint16_t minIn,  uint16_t maxIn,
+                               int16_t  minOut, int16_t  maxOut);
 int16_t int16clamp(int16_t value, int16_t min, int16_t max);
 
 @
@@ -241,10 +242,14 @@ but the numbers here were from trial and error and seem good.
 Until we have collected the edges we will assume there is no signal.
 @c
 
+
+const uint16_t minIn = 14970; // minimum normal value from receiver
+const uint16_t maxIn = 27530; // maximum normal value from receiver
+const int16_t minOut = -255;  // minimum value of thrust
+const int16_t maxOut =  255;  // maximum value of thrust
+
 inputStruct input_s = {
     .edge = CH2RISE,
-    .minIn = 14970,
-    .maxIn = 27530,
     .controlMode = OFF
     };
 
@@ -254,8 +259,6 @@ This is the structure that holds output parameters.
 It's instantiated with the endpoint constants.
 @c
 transStruct translation_s = {
-    .minOut = -255,
-    .maxOut = 255,
     .deadBand = 10
     };
 
@@ -329,7 +332,6 @@ Each sucessive loop will finish in the same way.
 After three passes |"translation_s"| will have good values.
 
 @c
- setPwm(translation_s.larboardOut, translation_s.starboardOut);
 
  sleep_mode();
 
@@ -349,13 +351,42 @@ if (handleIrq != NULL)
     handleIrq = NULL;
     }
 
+@
+Here we scale the \.{PWC} durations and apply the ``deadBand''. 
 
-translation_s.radius = scaler(&input_s, &translation_s, input_s.ch1duration);
-translation_s.thrust = scaler(&input_s, &translation_s, input_s.ch2duration);
-translation_s.track = 100; /* represents unit-less prop-to-prop distance */
+@c 
+
+ {
+ int16_t outputCh1;
+ int16_t outputCh2;
+
+ if (input_s.controlMode != OFF)
+    {    
+     outputCh1 = scaler(input_s.ch1duration, minIn, maxIn, minOut, maxOut);
+     outputCh2 = scaler(input_s.ch2duration, minIn, maxIn, minOut, maxOut);
+    }
+  else
+     {
+      outputCh1 = 0;
+      outputCh2 = 0;
+     }
+
+ outputCh1 = (abs(outputCh1) > translation_s.deadBand)?outputCh1:0;
+ outputCh2 = (abs(outputCh2) > translation_s.deadBand)?outputCh2:0;
+ 
+ translation_s.radius = outputCh1;
+ translation_s.thrust = outputCh2;
+ 
+ translation_s.track = 100; /* represents unit-less prop-to-prop distance */
+ }
+
+translate(&translation_s);
 
 if (input_s.controlMode == REMOTE )
-   translate(&translation_s);
+   setPwm(translation_s.larboardOut, translation_s.starboardOut);
+ else
+   setPwm(translation_s.larboardOut, translation_s.starboardOut);
+
    
 @
 The LED is used to indicate when both channels PWM's are zeros.
@@ -574,23 +605,22 @@ The scaler function takes an input, in time, from the Input Capture
 Register and returns a value scaled by the parameters in structure
 |"inputScale_s"|.
 @c
-int16_t scaler(inputStruct *input_s, transStruct *trans_s, uint16_t input)
+int16_t scaler(uint16_t input,
+               uint16_t minIn, 
+               uint16_t maxIn,
+                int16_t minOut,
+                int16_t maxOut)
 @#{@#
-uint16_t solution;
 @
 First, we can solve for the obvious cases.
-One is where there is no signal; when |"controlMode"| is |"OFF"|.
-The other is where the input exceeds the range.
 This can easily happen if the trim is shifted.
 @c
-  if (input_s->controlMode == OFF)
-     return 0;
 
-  if (input > input_s->maxIn)
-     return trans_s->maxOut;
+  if (input > maxIn)
+     return maxOut;
 
-  if (input < input_s->minIn)
-     return trans_s->minOut;
+  if (input < minIn)
+     return minOut;
 
 
 @
@@ -603,20 +633,16 @@ I don't have to manualy compute and enter these value.
 The constant |"ampFact"| amplifies values for math so I can take advantage of
 the extra bits for precision.
 
-Dead-band is applied when it returns.
 @c
 const int32_t ampFact = 128L;
 
-int32_t gain = (ampFact*(int32_t)(input_s->maxIn-input_s->minIn))/
-                    (int32_t)(trans_s->maxOut-trans_s->minOut);
+int32_t gain = (ampFact*(int32_t)(maxIn-minIn))/
+                    (int32_t)(maxOut-minOut);
 
-int32_t offset = ((ampFact*(int32_t)input_s->minIn)/gain)
-                 -(int32_t)trans_s->minOut;
+int32_t offset = ((ampFact*(int32_t)minIn)/gain)
+                 -(int32_t)minOut;
 
-solution = (ampFact*(int32_t)input/gain)-offset;
-
-
-return (abs(solution) > trans_s->deadBand)?solution:0;
+return (ampFact*(int32_t)input/gain)-offset;
 
 @#}@#
 
