@@ -103,7 +103,7 @@ Extensive use was made of the datasheet, Atmel
 ``Atmel-8271I-AVR- ATmega-Datasheet\_10/2014''.
 
 \vskip 4 pc
-\includegraphics[width=35 pc]{piruett.png}
+\includegraphics[width=35 pc]{piruett2.png}
 
 This is esentialy a boat and so I originaly wanted to use the word ``Port'' for
 the left-hand side, when facing the front.
@@ -525,9 +525,6 @@ if (input_s->edge == CH2RISE) // while timing isn't too critical
 if (!(++tickCount)) // every 256 ticks
     {
      if (input_s->controlMode >= DIVING)
-   // create a trasnstruct
-   // fill it
-   // call setPwm
    // do the PI stuff here? 
      ;
 
@@ -636,11 +633,9 @@ the extra bits for precision.
 @c
 const int32_t ampFact = 128L;
 
-int32_t gain = (ampFact*(int32_t)(maxIn-minIn))/
-                    (int32_t)(maxOut-minOut);
+int32_t gain = (ampFact*(int32_t)(maxIn-minIn))/(int32_t)(maxOut-minOut);
 
-int32_t offset = ((ampFact*(int32_t)minIn)/gain)
-                 -(int32_t)minOut;
+int32_t offset = ((ampFact*(int32_t)minIn)/gain)-(int32_t)minOut;
 
 return (ampFact*(int32_t)input/gain)-offset;
 
@@ -807,10 +802,8 @@ int16_t int16clamp(int16_t value, int16_t min, int16_t max)
  // set the led port direction; This is pin \#17
   DDRB |= (1<<DDB5);
 
-
  // set the relay port direction; This is pin \#8
   DDRB |= (1<<DDB0);
-
 
  // 14.4.9 DDRD – The Port D Data Direction Register
  // larboard and starboard pwm outputs
