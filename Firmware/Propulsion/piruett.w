@@ -248,7 +248,7 @@ const uint16_t maxIn = 27530; // maximum normal value from receiver
 const int16_t minOut = -255;  // minimum value of thrust
 const int16_t maxOut =  255;  // maximum value of thrust
 
-inputStruct input_s = {
+inputStruct* pInput_s = &(inputStruct){
     .edge = CH2RISE,
     .controlMode = OFF
     };
@@ -258,7 +258,7 @@ inputStruct input_s = {
 This is the structure that holds output parameters.
 It's instantiated with the endpoint constants.
 @c
-transStruct translation_s = {
+transStruct* pTranslation_s = &(transStruct){
     .deadBand = 10
     };
 
@@ -313,7 +313,7 @@ Since |"edge"| is already set, calling |"edgeSelect()"| will get it ready for
 the first rising edge of channel~2.
 Subsequent calls to |"edgeSelect"| rotates it to the next edge type.
 @c
-edgeSelect(&input_s);
+edgeSelect(pInput_s);
 
 @
 This is the loop that does the work.
@@ -347,7 +347,7 @@ wake-up for some other reason.
 @c
 if (handleIrq != NULL)
    {@#
-    handleIrq(&input_s);
+    handleIrq(pInput_s);
     handleIrq = NULL;
     }
 
@@ -360,10 +360,10 @@ Here we scale the \.{PWC} durations and apply the ``deadBand''.
  int16_t outputCh1;
  int16_t outputCh2;
 
- if (input_s.controlMode != OFF)
+ if (pInput_s->controlMode != OFF)
     {    
-     outputCh1 = scaler(input_s.ch1duration, minIn, maxIn, minOut, maxOut);
-     outputCh2 = scaler(input_s.ch2duration, minIn, maxIn, minOut, maxOut);
+     outputCh1 = scaler(pInput_s->ch1duration, minIn, maxIn, minOut, maxOut);
+     outputCh2 = scaler(pInput_s->ch2duration, minIn, maxIn, minOut, maxOut);
     }
   else
      {
@@ -371,27 +371,27 @@ Here we scale the \.{PWC} durations and apply the ``deadBand''.
       outputCh2 = 0;
      }
 
- outputCh1 = (abs(outputCh1) > translation_s.deadBand)?outputCh1:0;
- outputCh2 = (abs(outputCh2) > translation_s.deadBand)?outputCh2:0;
+ outputCh1 = (abs(outputCh1) > pTranslation_s->deadBand)?outputCh1:0;
+ outputCh2 = (abs(outputCh2) > pTranslation_s->deadBand)?outputCh2:0;
  
- translation_s.radius = outputCh1;
- translation_s.thrust = outputCh2;
+ pTranslation_s->radius = outputCh1;
+ pTranslation_s->thrust = outputCh2;
  
- translation_s.track = 100; /* represents unit-less prop-to-prop distance */
+ pTranslation_s->track = 100; /* represents unit-less prop-to-prop distance */
  }
 
-translate(&translation_s);
+translate(pTranslation_s);
 
-if (input_s.controlMode == REMOTE )
-   setPwm(translation_s.larboardOut, translation_s.starboardOut);
+if (pInput_s->controlMode == REMOTE )
+   setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
  else
-   setPwm(translation_s.larboardOut, translation_s.starboardOut);
+   setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
 
    
 @
 The LED is used to indicate when both channels PWM's are zeros.
 @c
-if(translation_s.larboardOut || translation_s.starboardOut)
+if(pTranslation_s->larboardOut || pTranslation_s->starboardOut)
     ledCntl(OFF);
  else
     ledCntl(ON);
@@ -461,7 +461,7 @@ of the $2^{16}$~counts of the 16~bit register.
 
 
 @c
-void pwcCalc(inputStruct *input_s)
+void pwcCalc(inputStruct *pInput_s)
 @#{@#
 @
 On the falling edges we can compute the durations using modulus subtraction
@@ -473,36 +473,36 @@ the flag.
 @c
 
 
- switch(input_s->edge)
+ switch(pInput_s->edge)
      {
       case CH2RISE:
-         input_s->ch2rise = ICR1;
-         input_s->edge = CH2FALL;
+         pInput_s->ch2rise = ICR1;
+         pInput_s->edge = CH2FALL;
        break;
       case CH2FALL:
-         input_s->ch2fall = ICR1;
-         input_s->ch2duration = input_s->ch2fall - input_s->ch2rise;
-         input_s->edge = CH1FALL;
+         pInput_s->ch2fall = ICR1;
+         pInput_s->ch2duration = pInput_s->ch2fall - pInput_s->ch2rise;
+         pInput_s->edge = CH1FALL;
        break;
       case CH1FALL:
-         input_s->ch1fall = ICR1;
-         input_s->ch1duration = input_s->ch1fall - input_s->ch2fall;
-         input_s->edge = CH2RISE;
-         if(input_s->controlMode == OFF) input_s->controlMode = REMOTE; 
+         pInput_s->ch1fall = ICR1;
+         pInput_s->ch1duration = pInput_s->ch1fall - pInput_s->ch2fall;
+         pInput_s->edge = CH2RISE;
+         if(pInput_s->controlMode == OFF) pInput_s->controlMode = REMOTE; 
 @t\hskip 1in@>  }
 
-edgeSelect(input_s);
+edgeSelect(pInput_s);
 @#}@#
 
 @
 This procedure sets output to zero in the event of a lost signal.
 @c
-void lostSignal(inputStruct *input_s)
+void lostSignal(inputStruct *pInput_s)
 @#{@#
- input_s->controlMode = OFF;
- input_s->edge = CH2RISE;
+ pInput_s->controlMode = OFF;
+ pInput_s->edge = CH2RISE;
 
- edgeSelect(input_s);
+ edgeSelect(pInput_s);
 @#}@#
 
 @
@@ -510,13 +510,13 @@ This procedure  will count off ticks for a $1\over 4$ second event.
 Every tick it will setup ADC to get pressure sensor values during idle.
 
 @c
-void diveTick(inputStruct *input_s)
+void diveTick(inputStruct *pInput_s)
 @#{@#
 static uint8_t tickCount = 0;
 
 // we are here 64 times per second
 
-if (input_s->edge == CH2RISE) // while timing isn't too critical
+if (pInput_s->edge == CH2RISE) // while timing isn't too critical
    {
     ADCSRA |= (1<<ADEN); // Connect the MUX to the ADC and enable it 
     ADMUX = (ADMUX & 0xf0)|2U; // Set MUX to channel 2
@@ -524,7 +524,7 @@ if (input_s->edge == CH2RISE) // while timing isn't too critical
 
 if (!(++tickCount)) // every 256 ticks
     {
-     if (input_s->controlMode >= DIVING)
+     if (pInput_s->controlMode >= DIVING)
    // do the PI stuff here? 
      ;
 
@@ -545,7 +545,7 @@ Since the \.{ADC} is a mere 10 bits, and $2^{10} \times 32$ is only $2^{15}$,
 the sum may safely be of size |"uint16_t"|.
 
 @c
-void pressureCalc(inputStruct *input_s)
+void pressureCalc(inputStruct *pInput_s)
 @#{@#
  static uint16_t buffStart[33];
  const  uint16_t *buffEnd = buffStart+33;
@@ -559,7 +559,7 @@ void pressureCalc(inputStruct *input_s)
  buffIndex = (buffIndex != buffEnd)?buffIndex+1:buffStart;
  sum -= *buffIndex; // remove the oldest item from the sum
  
- input_s->pressure = (sum>>5);
+ pInput_s->pressure = (sum>>5);
 
 @#}@#
 
@@ -569,10 +569,10 @@ The procedure edgeSelect configures the ``Input Capture'' unit to capture on
 the expected edge type.
 
 @c
-void edgeSelect(inputStruct *input_s)
+void edgeSelect(inputStruct *pInput_s)
 @#{@#
 
-  switch(input_s->edge)
+  switch(pInput_s->edge)
      {
    case CH2RISE: /* To wait for rising edge on servo-channel 2 */
       ADMUX = (ADMUX & 0xf0)|1U;  /* Set to mux channel 1 */
