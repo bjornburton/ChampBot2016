@@ -149,6 +149,7 @@ older word ``larboard''.
 # include <avr/wdt.h> // have need of watchdog
 # include <stdlib.h>
 # include <stdint.h>
+# include "takddc.h"
 
 @ Here is a structure type to keep track of the state of 
 inputs, e.g. servo timing. Rise and Fall indicate the \.{PWC} edges.
@@ -261,6 +262,23 @@ It's instantiated with the endpoint constants.
 transStruct* pTranslation_s = &(transStruct){
     .deadBand = 10
     };
+
+
+// safe defaults                                                                
+ddcParameters* pPidpar = &(ddcParameters){                                      
+   .k_p = 1,                                                                    
+   .k_i = 1,                                                                    
+   .k_d = 1,                                                                    
+   .t   = 1,                                                                    
+   .c_n1 = 0,                                                                   
+   .c_n2 = 0,                                                                   
+   .c_n3 = 0,                                                                   
+   .m = 0,   // no output                                                       
+   .mMin = INT16_MIN,                                                           
+   .mMax = INT16_MAX,                                                           
+   .mode = 1 // automatic                                                       
+   };        
+
 
 @
 Here the interrupts are disabled so that configuring them doesn't set it off.
