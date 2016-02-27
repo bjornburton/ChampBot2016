@@ -56,7 +56,7 @@ all:     default
 $(GRAPH): $(DOTSRC)
 	$(DOT) $(DOTFLAGS) $(DOTSRC) > $(GRAPH)
 
-$(DOTSRC): $(EGYPTSRC)
+$(DOTSRC): 
 	$(EGYPT) $(EGYPTSRC) |\
         awk '{gsub(/__vector_21/,"ADC_vect");print}' |\
         awk '{gsub(/__vector_10/,"TIMER1_CAPT_vect");print}' |\

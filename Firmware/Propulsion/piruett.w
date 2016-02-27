@@ -18,7 +18,6 @@ to the appropriate motor actions.
 
 Also an autonomous dive function has been added.
 
-
 Thrust is Channel 2, entering analog input A1, and Radius is channel 1, at A0.
 The action will be similar to driving an \.{RC} car or boat.
 By keeping it natural, it should be easier to navigate the course than with a
@@ -130,6 +129,8 @@ older word ``larboard''.
 @d REVERSE 0
 @d CLOSED 1
 @d OPEN 0
+@d AUTOMATIC 1
+@d MANUAL 0
 @d STOPPED 0
 
 @ Here are some other definitions.
@@ -143,13 +144,12 @@ older word ``larboard''.
 @d SUBMERGED 3 //the mode of being submerged
 
 @ @<Include...@>=
-# include <avr/io.h> // need some port access
+# include  <avr/io.h> // need some port access
 # include <avr/interrupt.h> // have need of an interrupt
 # include <avr/sleep.h> // have need of sleep
 # include <avr/wdt.h> // have need of watchdog
 # include <stdlib.h>
 # include <stdint.h>
-# include "takddc.h"
 
 @ Here is a structure type to keep track of the state of 
 inputs, e.g. servo timing. Rise and Fall indicate the \.{PWC} edges.
@@ -191,6 +191,23 @@ typedef struct {
     } diveStruct;
 
 
+// this structure is for takDdc* functions 
+typedef struct {
+   int16_t k_p; // proportional action parameter
+   int16_t k_i; // integral action parameter in R/T
+   int16_t k_d; // derivative action parameter
+   int16_t t;   // sampling period
+   int16_t c_n1; // process one period behind
+   int16_t c_n2; // process two periods behind
+   int16_t c_n3; // process three periods behind
+   int16_t m;    // latest output
+   int16_t mMin; // min output
+   int16_t mMax; // max output
+   int8_t  mode; // 1 == automatic, 0 == manual
+   } ddcParameters;
+
+
+
 @ @<Prototypes...@>=
 void relayCntl(int8_t state);
 void ledCntl(int8_t state);
@@ -206,6 +223,10 @@ void lostSignal(inputStruct *);
 int16_t scaler(uint16_t input, uint16_t minIn,  uint16_t maxIn,
                                int16_t  minOut, int16_t  maxOut);
 int16_t int16clamp(int16_t value, int16_t min, int16_t max);
+void takDdcSetPid(ddcParameters*, int16_t p, int16_t i, int16_t d, int16_t t);
+void takDdcSetOut(ddcParameters*, int16_t min, int16_t max,
+                                   int16_t output, int16_t process); 
+int16_t takDdc(ddcParameters*, int16_t setpoint, int16_t process);
 
 @
 My lone global variable is a function pointer.
@@ -235,7 +256,7 @@ About $4 \over 5$ of that range are the full swing of the stick, without trim.
 This is from about 14970 and 27530 ticks.
 
 |".minIn"| |".maxIn"| are the endpoints of the normal stick travel.
-The units are raw counnts as the Input Capture Register will use.
+The units are raw counts as the Input Capture Register will use.
 
 At some point a calibration feature could be added which could populate these
 but the numbers here were from trial and error and seem good.
@@ -249,6 +270,10 @@ const uint16_t maxIn = 27530; // maximum normal value from receiver
 const int16_t minOut = -255;  // minimum value of thrust
 const int16_t maxOut =  255;  // maximum value of thrust
 
+@
+Initially we will have the motors off and wait for the first rising edge
+from the remote.
+@c 
 inputStruct* pInput_s = &(inputStruct){
     .edge = CH2RISE,
     .controlMode = OFF
@@ -264,22 +289,37 @@ transStruct* pTranslation_s = &(transStruct){
     };
 
 
-// safe defaults                                                                
-ddcParameters* pPidpar = &(ddcParameters){                                      
+@
+Initial values are loaded into the dive PID.
+|"k_p"|is the proportional coefficient.
+The larger it is, the bigger will be the effect of PID.
+
+|"k_i"| is the integral coefficient in resets per unit-time.
+
+|"k_d"| is the derivative coefficient.
+
+|"m"| is the output. Whatever is minimal energy is probably a good
+number.
+
+|"min"| is the minimum allowed output.
+
+|"max"| is the maximum allowed output.
+
+|"mode"| can be manual or automatic;
+@c                                                                 
+ddcParameters* pPidPar = &(ddcParameters){                                      
    .k_p = 1,                                                                    
    .k_i = 1,                                                                    
    .k_d = 1,                                                                    
    .t   = 1,                                                                    
-   .c_n1 = 0,                                                                   
-   .c_n2 = 0,                                                                   
-   .c_n3 = 0,                                                                   
-   .m = 0,   // no output                                                       
+   .m = 0,                                                          
    .mMin = INT16_MIN,                                                           
    .mMax = INT16_MAX,                                                           
-   .mode = 1 // automatic                                                       
+   .mode = AUTOMATIC                                                       
    };        
 
 
+         takDdc(pPidPar, 5, 5);
 @
 Here the interrupts are disabled so that configuring them doesn't set it off.
 @c
@@ -543,8 +583,9 @@ if (pInput_s->edge == CH2RISE) // while timing isn't too critical
 if (!(++tickCount)) // every 256 ticks
     {
      if (pInput_s->controlMode >= DIVING)
-   // do the PI stuff here? 
-     ;
+        {
+         // do the PI stuff here? 
+         }
 
      wdt_reset(); /* watchdog timer is reset */
     }
@@ -797,6 +838,93 @@ void larboardDirection(int8_t state)
 
 @#}@#
 
+
+@
+This is the PID algorithm for the dive control.
+It is largely based on an
+algorithm from the book
+{\it Control and Dynamic Systems} by Yasundo Takahashi, et al.\ (1970).
+This is a nice, easy to compute iterative (velocity) algorithm.
+Everything is integrated so the proportional starts as a derivative and
+the derivative starts as a second derivative.
+It's a unique form, since error is seen only through the integral.
+Takahashi suggested a four point difference for the derivative, if the
+signal is noisy.
+I'm sure it will be so this feature has been included.
+Takahashi's four point difference was a bit involved, so to make this easy,
+I used numerical differentiation coefficients from the
+{\it CRC Standard Mathematical Tables, 27th Edition} (1985).
+The four point technique has also been extended to the proportional term.
+so that should be smoother too.
+A final difference from the book form is that the integral is in terms of
+repeats/unit-time.
+This function takes a structure pointer, along with the setpoint and
+process.
+That structure holds everything unique to the channel of
+control, including the process and output history.
+
+This function should be called with each process sample.   
+@c
+
+int16_t takDdc(ddcParameters* pPar, int16_t setpoint, int16_t process)
+@#{@#
+ if(pPar->mode == AUTOMATIC)  
+   @#{@#
+    int16_t dDer = ((-11) * pPar->c_n3 + 
+                     (18) * pPar->c_n2 +
+                     (-9) * pPar->c_n1 +
+                      (2) * process)/(6);
+
+ 
+    int16_t dSecDer = (-1)*pPar->c_n3 +
+                       (4)*pPar->c_n2 +
+                      (-5)*pPar->c_n1 +
+                       (2)*process;
+
+
+    int16_t err = setpoint - process;
+
+    @#// integrate the delta of output
+    pPar->m += pPar->k_p*(dDer + pPar->k_i*err - pPar->k_d*dSecDer); 
+    
+    pPar->m = int16clamp(pPar->m, pPar->mMin, pPar->mMax);
+   @#}@#
+
+ // age the process value history regardless
+ pPar->c_n3 = pPar->c_n2;
+ pPar->c_n2 = pPar->c_n1;
+ pPar->c_n1 = process;
+
+ return pPar->m;
+@#}@#
+
+@
+ Takahashi Discrete Digital Control PID and Period initialization.
+ Call this once to set parameters, or when they are changed.
+@c
+void takDdcSetPid(ddcParameters* pPar, int16_t p, int16_t i, int16_t d,
+                  int16_t t) 
+{
+ pPar->t = t;
+ pPar->k_p = (int16_t)p;
+ pPar->k_i = (int16_t)i / pPar->t;
+ pPar->k_d = (int16_t)d / pPar->t;
+}
+
+@
+Takahashi Discrete Digital Control Output initialization
+call this once to set parameters, or when they are changed
+call immediately before initial control, if output or process are stale
+@c
+void takDdcSetOut(ddcParameters* pPar, int16_t min, int16_t max,
+                  int16_t output, int16_t process) 
+{
+ pPar->mMin = min;
+ pPar->mMax = max;
+ pPar->m = output;
+ pPar->c_n3 = (pPar->c_n2 = (pPar->c_n1 = process));
+}
+
 @
 Here is a simple procedure to set thrust direction on the starboard motor.
 @c
@@ -941,5 +1069,6 @@ glue-logic  which drives the H-Bridge.
 // 15.9.2 TCCR0B – Timer/Counter Control Register B
  TCCR0B |= (1<<CS01);   // Prescaler set to clk/8 (table 15-9)
 }
+
 
 
