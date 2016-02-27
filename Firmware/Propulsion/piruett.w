@@ -151,7 +151,7 @@ older word ``larboard''.
 # include <stdlib.h>
 # include <stdint.h>
 
-@ Here is a structure type to keep track of the state of 
+@ Here is a structure type to keep track of the state of
 inputs, e.g. servo timing. Rise and Fall indicate the \.{PWC} edges.
 |"edge"| is set to the edge type expected for the interrupt.
 
@@ -191,7 +191,7 @@ typedef struct {
     } diveStruct;
 
 
-// this structure is for takDdc* functions 
+// this structure is for takDdc* functions
 typedef struct {
    int16_t k_p; // proportional action parameter
    int16_t k_i; // integral action parameter in R/T
@@ -225,7 +225,7 @@ int16_t scaler(uint16_t input, uint16_t minIn,  uint16_t maxIn,
 int16_t int16clamp(int16_t value, int16_t min, int16_t max);
 void takDdcSetPid(ddcParameters*, int16_t p, int16_t i, int16_t d, int16_t t);
 void takDdcSetOut(ddcParameters*, int16_t min, int16_t max,
-                                   int16_t output, int16_t process); 
+                                   int16_t output, int16_t process);
 int16_t takDdc(ddcParameters*, int16_t setpoint, int16_t process);
 
 @
@@ -273,7 +273,7 @@ const int16_t maxOut =  255;  // maximum value of thrust
 @
 Initially we will have the motors off and wait for the first rising edge
 from the remote.
-@c 
+@c
 inputStruct* pInput_s = &(inputStruct){
     .edge = CH2RISE,
     .controlMode = OFF
@@ -306,17 +306,17 @@ number.
 |"max"| is the maximum allowed output.
 
 |"mode"| can be manual or automatic;
-@c                                                                 
-ddcParameters* pPidPar = &(ddcParameters){                                      
-   .k_p = 1,                                                                    
-   .k_i = 1,                                                                    
-   .k_d = 1,                                                                    
-   .t   = 1,                                                                    
-   .m = 0,                                                          
-   .mMin = INT16_MIN,                                                           
-   .mMax = INT16_MAX,                                                           
-   .mode = AUTOMATIC                                                       
-   };        
+@c
+ddcParameters* pPidPar = &(ddcParameters){
+   .k_p = 1,
+   .k_i = 1,
+   .k_d = 1,
+   .t   = 1,
+   .m = 0,
+   .mMin = INT16_MIN,
+   .mMax = INT16_MAX,
+   .mode = AUTOMATIC
+   };
 
 
          takDdc(pPidPar, 5, 5);
@@ -410,16 +410,16 @@ if (handleIrq != NULL)
     }
 
 @
-Here we scale the \.{PWC} durations and apply the ``deadBand''. 
+Here we scale the \.{PWC} durations and apply the ``deadBand''.
 
-@c 
+@c
 
  {
  int16_t outputCh1;
  int16_t outputCh2;
 
  if (pInput_s->controlMode != OFF)
-    {    
+    {
      outputCh1 = scaler(pInput_s->ch1duration, minIn, maxIn, minOut, maxOut);
      outputCh2 = scaler(pInput_s->ch2duration, minIn, maxIn, minOut, maxOut);
     }
@@ -431,10 +431,10 @@ Here we scale the \.{PWC} durations and apply the ``deadBand''.
 
  outputCh1 = (abs(outputCh1) > pTranslation_s->deadBand)?outputCh1:0;
  outputCh2 = (abs(outputCh2) > pTranslation_s->deadBand)?outputCh2:0;
- 
+
  pTranslation_s->radius = outputCh1;
  pTranslation_s->thrust = outputCh2;
- 
+
  pTranslation_s->track = 100; /* represents unit-less prop-to-prop distance */
  }
 
@@ -445,7 +445,7 @@ if (pInput_s->controlMode == REMOTE )
  else
    setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
 
-   
+
 @
 The LED is used to indicate when both channels PWM's are zeros.
 @c
@@ -546,7 +546,7 @@ the flag.
          pInput_s->ch1fall = ICR1;
          pInput_s->ch1duration = pInput_s->ch1fall - pInput_s->ch2fall;
          pInput_s->edge = CH2RISE;
-         if(pInput_s->controlMode == OFF) pInput_s->controlMode = REMOTE; 
+         if(pInput_s->controlMode == OFF) pInput_s->controlMode = REMOTE;
 @t\hskip 1in@>  }
 
 edgeSelect(pInput_s);
@@ -576,7 +576,7 @@ static uint8_t tickCount = 0;
 
 if (pInput_s->edge == CH2RISE) // while timing isn't too critical
    {
-    ADCSRA |= (1<<ADEN); // Connect the MUX to the ADC and enable it 
+    ADCSRA |= (1<<ADEN); // Connect the MUX to the ADC and enable it
     ADMUX = (ADMUX & 0xf0)|2U; // Set MUX to channel 2
    }
 
@@ -584,7 +584,7 @@ if (!(++tickCount)) // every 256 ticks
     {
      if (pInput_s->controlMode >= DIVING)
         {
-         // do the PI stuff here? 
+         // do the PI stuff here?
          }
 
      wdt_reset(); /* watchdog timer is reset */
@@ -599,7 +599,7 @@ units. First the comparator is reconnected to the \.{MUX} so that we miss as few
 RC events as possible.
 There is a moving average filter of size 32 or about $1 \over 2$ second in
 size.
-That size is efficient since the division is a binary right shift of 5 places. 
+That size is efficient since the division is a binary right shift of 5 places.
 Since the \.{ADC} is a mere 10 bits, and $2^{10} \times 32$ is only $2^{15}$,
 the sum may safely be of size |"uint16_t"|.
 
@@ -609,15 +609,15 @@ void pressureCalc(inputStruct *pInput_s)
  static uint16_t buffStart[33];
  const  uint16_t *buffEnd = buffStart+33;
  static uint16_t *buffIndex = buffStart;
- static uint16_t sum; // range 0 to 32768 
+ static uint16_t sum; // range 0 to 32768
 
- ADCSRA &= ~(1<<ADEN); // reconnect the MUX to the comparator 
+ ADCSRA &= ~(1<<ADEN); // reconnect the MUX to the comparator
 
  *buffIndex = ADCL & ((uint16_t)ADCH)<<8; // drop in the ADC value
  sum += *buffIndex; // include this new find in the sum
  buffIndex = (buffIndex != buffEnd)?buffIndex+1:buffStart;
  sum -= *buffIndex; // remove the oldest item from the sum
- 
+
  pInput_s->pressure = (sum>>5);
 
 @#}@#
@@ -662,7 +662,7 @@ Register and returns a value scaled by the parameters in structure
 |"inputScale_s"|.
 @c
 int16_t scaler(uint16_t input,
-               uint16_t minIn, 
+               uint16_t minIn,
                uint16_t maxIn,
                 int16_t minOut,
                 int16_t maxOut)
@@ -863,19 +863,19 @@ process.
 That structure holds everything unique to the channel of
 control, including the process and output history.
 
-This function should be called with each process sample.   
+This function should be called with each process sample.
 @c
 
 int16_t takDdc(ddcParameters* pPar, int16_t setpoint, int16_t process)
 @#{@#
- if(pPar->mode == AUTOMATIC)  
+ if(pPar->mode == AUTOMATIC)
    @#{@#
-    int16_t dDer = ((-11) * pPar->c_n3 + 
+    int16_t dDer = ((-11) * pPar->c_n3 +
                      (18) * pPar->c_n2 +
                      (-9) * pPar->c_n1 +
                       (2) * process)/(6);
 
- 
+
     int16_t dSecDer = (-1)*pPar->c_n3 +
                        (4)*pPar->c_n2 +
                       (-5)*pPar->c_n1 +
@@ -885,8 +885,8 @@ int16_t takDdc(ddcParameters* pPar, int16_t setpoint, int16_t process)
     int16_t err = setpoint - process;
 
     @#// integrate the delta of output
-    pPar->m += pPar->k_p*(dDer + pPar->k_i*err - pPar->k_d*dSecDer); 
-    
+    pPar->m += pPar->k_p*(dDer + pPar->k_i*err - pPar->k_d*dSecDer);
+
     pPar->m = int16clamp(pPar->m, pPar->mMin, pPar->mMax);
    @#}@#
 
@@ -903,7 +903,7 @@ int16_t takDdc(ddcParameters* pPar, int16_t setpoint, int16_t process)
  Call this once to set parameters, or when they are changed.
 @c
 void takDdcSetPid(ddcParameters* pPar, int16_t p, int16_t i, int16_t d,
-                  int16_t t) 
+                  int16_t t)
 {
  pPar->t = t;
  pPar->k_p = (int16_t)p;
@@ -917,7 +917,7 @@ call this once to set parameters, or when they are changed
 call immediately before initial control, if output or process are stale
 @c
 void takDdcSetOut(ddcParameters* pPar, int16_t min, int16_t max,
-                  int16_t output, int16_t process) 
+                  int16_t output, int16_t process)
 {
  pPar->mMin = min;
  pPar->mMax = max;
@@ -967,7 +967,7 @@ int16_t int16clamp(int16_t value, int16_t min, int16_t max)
 This section configures the analog section for both analog and input capture
 through the \.{MUX}.
 Since the \.{MUX} is used \.{AIN1} and \.{AIN0} may still be used for digital
-data. 
+data.
 Default is \.{ICR} on channel 0 but by setting the MUX to channel 2 and
 clearing \.{ADEN}, an ADC conversion will occour on the next idle.
 Conversion will take about 191~$\mu$s and will complete with an interrupt.
@@ -977,7 +977,7 @@ Conversion will take about 191~$\mu$s and will complete with an interrupt.
  ADCSRA &= ~(1<<ADEN); // Conn the MUX to (-) input of comparator (sec 23.2)
  ADCSRA &= ~((1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)); // prescaler to 128
  ADCSRA &= ~(1<<ADIE); // ADC to interrupt on completion
- 
+
  // 23.3.1 ADCSRB – ADC Control and Status Register B
  ADCSRB |= (1<<ACME);  // Conn the MUX to (-) input of comparator (sec 23.2)
 
@@ -998,8 +998,8 @@ Conversion will take about 191~$\mu$s and will complete with an interrupt.
 
  // 24.9.1 ADMUX – ADC Multiplexer Selection Register
  ADMUX = (ADMUX & 0xf0) | 0U; // Set to mux channel 0
- ADMUX &= ~(1<<REFS0); // Set ADC to use VREF 
- 
+ ADMUX &= ~(1<<REFS0); // Set ADC to use VREF
+
 }
 
 @
@@ -1024,7 +1024,7 @@ With all that we will have interrupt \.{TIMER2} \.{COMPA} fire every 31 ms.
 For the software division we will increment an uint8\_t in the handler on each
 pass and do something at both 0 and 128.
 The test could look a bit like |"!(++tickCount \& ~"|divisor|"U)"| except at
-256; but we are at 256 so |"!(++tickCount")| will do. 
+256; but we are at 256 so |"!(++tickCount")| will do.
 
 @ @<Initialize tick timer...@>=
 {
