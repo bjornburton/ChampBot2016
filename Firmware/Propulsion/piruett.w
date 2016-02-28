@@ -36,7 +36,8 @@ For reverse, \.{LOW} on \.{IN1} and \.{PWM} on \.{IN2}.
 Rulling out multiple timers (four comparators), additional outputs,
 or a \.{PLD}, the best solution we could find was a adding glue logic.
 A single 74F02 was chosen; a quad \.{NOR}.
-Keeping this solution simple, i.e. one gate-type and on one chip, required that the \.{AVR} outputs be inverted.
+Keeping this solution simple, i.e. one gate-type and on one chip, required
+that the \.{AVR} outputs be inverted.
 \includegraphics[width=25 pc]{glue.png}a
 This one chip handles the logic for both motors. With this, the AVR outputs
 direction on one pin and \.{PWM} on the other.
@@ -102,7 +103,7 @@ Extensive use was made of the datasheet, Atmel
 ``Atmel-8271I-AVR- ATmega-Datasheet\_10/2014''.
 
 \vskip 4 pc
-\includegraphics[width=35 pc]{piruett2.png}
+\includegraphics[width=35 pc]{piruett.png}
 
 This is esentialy a boat and so I originaly wanted to use the word ``Port'' for
 the left-hand side, when facing the front.
@@ -133,7 +134,8 @@ older word ``larboard''.
 @d MANUAL 0
 @d STOPPED 0
 
-@ Here are some other definitions.
+@ Here are some other definitions. It is critical that |"MAX_DUTYCYCLE"| is
+98\% or less.
 @d CH2RISE 0   // rising edge of RC's remote channel 2
 @d CH2FALL 1   // falling edge of RC's remote channel 2
 @d CH1FALL 2   // falling edge of RC's remote channel 1
@@ -151,8 +153,35 @@ older word ``larboard''.
 # include <stdlib.h>
 # include <stdint.h>
 
+@
+This structure is for the PID or Direct Digital Control.
+|"k_p"|is the proportional coefficient.
+The larger it is, the bigger will be the effect of PID.
+|"k_i"| is the integral coefficient in resets per unit-time.
+|"k_d"| is the derivative coefficient.
+|"m"| is the output. Whatever is minimal energy is probably a good
+output to start with.
+|"min"| is the minimum allowed output.
+|"max"| is the maximum allowed output.
+|"mode"| can be manual or automatic;
+@<Types...@>=
+typedef struct {
+   int16_t k_p; // proportional action parameter
+   int16_t k_i; // integral action parameter in R/T
+   int16_t k_d; // derivative action parameter
+   int16_t t;   // sampling period
+   int16_t c_n1; // process one period behind
+   int16_t c_n2; // process two periods behind
+   int16_t c_n3; // process three periods behind
+   int16_t m;    // latest output
+   int16_t mMin; // min output
+   int16_t mMax; // max output
+   int8_t  mode; // 1 == automatic, 0 == manual
+   } ddcParameters;
+
 @ Here is a structure type to keep track of the state of
-inputs, e.g. servo timing. Rise and Fall indicate the \.{PWC} edges.
+inputs, e.g. servo timing.
+Rise and Fall indicate the \.{PWC} edge times.
 |"edge"| is set to the edge type expected for the interrupt.
 
 @<Types...@>=
@@ -164,9 +193,10 @@ typedef struct {
     uint16_t ch2duration;
     uint8_t  edge;
     uint8_t  controlMode;
-    uint16_t pressure; // pressure in ADC units
+    uint16_t pressure;       // pressure in ADC units
     const uint16_t minIn;    // input, minimum
     const uint16_t maxIn;    // input, maximum
+    ddcParameters *pPid_s;
     } inputStruct;
 
 @ Here is a structure type to keep track of the state of translation items.
@@ -189,23 +219,6 @@ typedef struct {
     int16_t starboardOut;   // -255 to 255
     int16_t larboardOut;    // -255 to 255
     } diveStruct;
-
-
-// this structure is for takDdc* functions
-typedef struct {
-   int16_t k_p; // proportional action parameter
-   int16_t k_i; // integral action parameter in R/T
-   int16_t k_d; // derivative action parameter
-   int16_t t;   // sampling period
-   int16_t c_n1; // process one period behind
-   int16_t c_n2; // process two periods behind
-   int16_t c_n3; // process three periods behind
-   int16_t m;    // latest output
-   int16_t mMin; // min output
-   int16_t mMax; // max output
-   int8_t  mode; // 1 == automatic, 0 == manual
-   } ddcParameters;
-
 
 
 @ @<Prototypes...@>=
@@ -231,7 +244,7 @@ int16_t takDdc(ddcParameters*, int16_t setpoint, int16_t process);
 @
 My lone global variable is a function pointer.
 This lets me pass arguments to the actual interrupt handlers and acts a bit
-like a stack of one to store the next action.
+like a stack to store the next action.
 This pointer gets the appropriate function attached by the |"ISR()"| function.
 
 This input structure is to contain all of the external inputs.
@@ -267,16 +280,28 @@ Until we have collected the edges we will assume there is no signal.
 
 const uint16_t minIn = 14970; // minimum normal value from receiver
 const uint16_t maxIn = 27530; // maximum normal value from receiver
-const int16_t minOut = -255;  // minimum value of thrust
-const int16_t maxOut =  255;  // maximum value of thrust
+const int16_t minOut = INT16_MIN;  // minimum value of thrust
+const int16_t maxOut = INT16_MAX;  // maximum value of thrust
 
 @
 Initially we will have the motors off and wait for the first rising edge
-from the remote.
+from the remote. The PID parameters are instantiated and loaded with safe
+defaults. |"takDdcSetpin"| and |"takDdcSetOut()"| are used to set the
+parameters. 
 @c
 inputStruct* pInput_s = &(inputStruct){
     .edge = CH2RISE,
-    .controlMode = OFF
+    .controlMode = OFF,
+    .pPid_s  = &(ddcParameters){
+            .k_p = 1,
+            .k_i = 1,
+            .k_d = 1,
+            .t   = 1,
+            .m = 0,
+            .mMin = INT16_MIN,
+            .mMax = INT16_MAX,
+            .mode = AUTOMATIC
+           }
     };
 
 
@@ -289,37 +314,6 @@ transStruct* pTranslation_s = &(transStruct){
     };
 
 
-@
-Initial values are loaded into the dive PID.
-|"k_p"|is the proportional coefficient.
-The larger it is, the bigger will be the effect of PID.
-
-|"k_i"| is the integral coefficient in resets per unit-time.
-
-|"k_d"| is the derivative coefficient.
-
-|"m"| is the output. Whatever is minimal energy is probably a good
-number.
-
-|"min"| is the minimum allowed output.
-
-|"max"| is the maximum allowed output.
-
-|"mode"| can be manual or automatic;
-@c
-ddcParameters* pPidPar = &(ddcParameters){
-   .k_p = 1,
-   .k_i = 1,
-   .k_d = 1,
-   .t   = 1,
-   .m = 0,
-   .mMin = INT16_MIN,
-   .mMax = INT16_MAX,
-   .mode = AUTOMATIC
-   };
-
-
-         takDdc(pPidPar, 5, 5);
 @
 Here the interrupts are disabled so that configuring them doesn't set it off.
 @c
@@ -411,7 +405,6 @@ if (handleIrq != NULL)
 
 @
 Here we scale the \.{PWC} durations and apply the ``deadBand''.
-
 @c
 
  {
@@ -445,7 +438,6 @@ if (pInput_s->controlMode == REMOTE )
  else
    setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
 
-
 @
 The LED is used to indicate when both channels PWM's are zeros.
 @c
@@ -466,7 +458,6 @@ return 0;
 
 @* Supporting routines, functions, procedures and configuration
 blocks.
-
 
 @
 Here is the ISR that fires at each captured edge.
@@ -584,7 +575,8 @@ if (!(++tickCount)) // every 256 ticks
     {
      if (pInput_s->controlMode >= DIVING)
         {
-         // do the PI stuff here?
+         // do the PID stuff here?
+         takDdc(pInput_s->pPid_s,5,5);
          }
 
      wdt_reset(); /* watchdog timer is reset */
@@ -595,8 +587,8 @@ if (!(++tickCount)) // every 256 ticks
 
 @
 This procedure will filter \.{ADC} results for a pressure in terms of \.{ADC}
-units. First the comparator is reconnected to the \.{MUX} so that we miss as few
-RC events as possible.
+units. First the comparator is reconnected to the \.{MUX} so that we miss as
+few RC events as possible.
 There is a moving average filter of size 32 or about $1 \over 2$ second in
 size.
 That size is efficient since the division is a binary right shift of 5 places.
@@ -669,7 +661,7 @@ int16_t scaler(uint16_t input,
 @#{@#
 @
 First, we can solve for the obvious cases.
-This can easily happen if the trim is shifted.
+This can easily happen if the trim is shifted and the lever is at its limit.
 @c
 
   if (input > maxIn)
@@ -686,8 +678,8 @@ This is not really an efficient method, recomputing gain and offset every time
 but we are not in a rush and it makes it easier since, if something changes,
 I don't have to manualy compute and enter these value.
 
-The constant |"ampFact"| amplifies values for math so I can take advantage of
-the extra bits for precision.
+The constant |"ampFact"| amplifies values for math to take advantage of
+the high bits for precision.
 
 @c
 const int32_t ampFact = 128L;
@@ -708,11 +700,12 @@ Since the true speed is not known, we will use thrust.
 It should steer OK as long as the speed is constant and small changes in speed
 should not be too disruptive.
 The sign of |"larboardOut"| and |"starboardOut"| indicates direction.
-The constant |"ampFact"| amplifies values for math so I can take advantage of
-the extra bits for precision.
+As befire, the constant |"ampFact"| amplifies values for math so to take
+advantage of the high bits for precision.
  bits.
 
-This procedure is intended for values from -255 to 255.
+This procedure is intended for values from -255 to 255 or |"INT16_MIN"| to
+|"INT16_MAX"|.
 
 |"max"| is set to support the limit of the bridge-driver's charge-pump.
 @c
@@ -724,7 +717,7 @@ int16_t rotation;
 int16_t difference;
 int16_t piruett;
 static int8_t lock = OFF;
-const int8_t PirLockLevel = 15;
+const int8_t pirLockLevel = 15;
 const int16_t max = (MAX_DUTYCYCLE * UINT8_MAX)/100;
 const int16_t ampFact = 128;
 
@@ -742,7 +735,7 @@ The radius sensitivity is adjusted by changing the value of |"track"|.
 @
 Any rotation involves one motor turning faster than the other.
 At some point, faster is not possible and so the leading motor's thrust is
-clipped.
+clipped. It seems better to compromise speed rather than turning.
 
 
 If there is no thrust then it is in piruett mode and spins \.{CW} or \.{CCW}.
@@ -758,7 +751,7 @@ This is partly for noise immunity and partly to help avoid collisions.
     }
   else /* piruett mode */
    {
-    lock = (abs(piruett) > PirLockLevel)?ON:OFF;
+    lock = (abs(piruett) > pirLockLevel)?ON:OFF;
 
     trans_s->larboardOut = int16clamp(piruett, -max, max);
 @
@@ -841,89 +834,101 @@ void larboardDirection(int8_t state)
 
 @
 This is the PID algorithm for the dive control.
-It is largely based on an
-algorithm from the book
+It is largely based on an algorithm from the book
 {\it Control and Dynamic Systems} by Yasundo Takahashi, et al.\ (1970).
 This is a nice, easy to compute iterative (velocity) algorithm.
+
 Everything is integrated so the proportional starts as a derivative and
 the derivative starts as a second derivative.
 It's a unique form, since error is seen only through the integral.
+
 Takahashi suggested a four point difference for the derivative, if the
 signal is noisy.
-I'm sure it will be so this feature has been included.
+It may be very noisy so this feature has been included.
 Takahashi's four point difference was a bit involved, so to make this easy,
 I used numerical differentiation coefficients from the
 {\it CRC Standard Mathematical Tables, 27th Edition} (1985).
 The four point technique has also been extended to the proportional term.
-so that should be smoother too.
-A final difference from the book form is that the integral is in terms of
-repeats/unit-time.
+With that it will have some inherent filtering.
+
+A final difference from Takahashi's book form is that the integral is in
+terms of repeats per unit-time.
+
+
 This function takes a structure pointer, along with the setpoint and
 process.
-That structure holds everything unique to the channel of
-control, including the process and output history.
+That structure holds everything unique to the channel of control, including
+the process and output history.
+
+First the derivitives are calculated, from the four last samples of the
+process variable, using the coefficients.
+Next, the error between process and setpoint is computed.
+We then integrate the process variable's derivative, the error and the
+process variable's second derivative.
+That results in a correction based on the process's proportional, the error's
+integral and process's derivative.
+Finally, it is clamped to the limits, which could be of the integer's type.
 
 This function should be called with each process sample.
 @c
 
-int16_t takDdc(ddcParameters* pPar, int16_t setpoint, int16_t process)
+int16_t takDdc(ddcParameters* pPar_s, int16_t setpoint, int16_t process)
 @#{@#
- if(pPar->mode == AUTOMATIC)
-   @#{@#
-    int16_t dDer = ((-11) * pPar->c_n3 +
-                     (18) * pPar->c_n2 +
-                     (-9) * pPar->c_n1 +
+ if(pPar_s->mode == AUTOMATIC)
+   {
+    int16_t dDer = ((-11) * pPar_s->c_n3 +
+                     (18) * pPar_s->c_n2 +
+                     (-9) * pPar_s->c_n1 +
                       (2) * process)/(6);
 
 
-    int16_t dSecDer = (-1)*pPar->c_n3 +
-                       (4)*pPar->c_n2 +
-                      (-5)*pPar->c_n1 +
+    int16_t dSecDer = (-1)*pPar_s->c_n3 +
+                       (4)*pPar_s->c_n2 +
+                      (-5)*pPar_s->c_n1 +
                        (2)*process;
 
 
     int16_t err = setpoint - process;
 
-    @#// integrate the delta of output
-    pPar->m += pPar->k_p*(dDer + pPar->k_i*err - pPar->k_d*dSecDer);
+    pPar_s->m += pPar_s->k_p*(dDer + pPar_s->k_i*err - pPar_s->k_d*dSecDer);
 
-    pPar->m = int16clamp(pPar->m, pPar->mMin, pPar->mMax);
-   @#}@#
+    pPar_s->m = int16clamp(pPar_s->m, pPar_s->mMin, pPar_s->mMax);
+   }
 
  // age the process value history regardless
- pPar->c_n3 = pPar->c_n2;
- pPar->c_n2 = pPar->c_n1;
- pPar->c_n1 = process;
+ pPar_s->c_n3 = pPar_s->c_n2;
+ pPar_s->c_n2 = pPar_s->c_n1;
+ pPar_s->c_n1 = process;
 
- return pPar->m;
+ return pPar_s->m;
 @#}@#
 
 @
  Takahashi Discrete Digital Control PID and Period initialization.
  Call this once to set parameters, or when they are changed.
 @c
-void takDdcSetPid(ddcParameters* pPar, int16_t p, int16_t i, int16_t d,
+void takDdcSetPid(ddcParameters* pPar_s, int16_t p, int16_t i, int16_t d,
                   int16_t t)
-{
- pPar->t = t;
- pPar->k_p = (int16_t)p;
- pPar->k_i = (int16_t)i / pPar->t;
- pPar->k_d = (int16_t)d / pPar->t;
-}
+@#{@#
+ pPar_s->t = t;
+ pPar_s->k_p = (int16_t)p;
+ pPar_s->k_i = (int16_t)i / pPar_s->t;
+ pPar_s->k_d = (int16_t)d / pPar_s->t;
+@#}@#
 
 @
 Takahashi Discrete Digital Control Output initialization
 call this once to set parameters, or when they are changed
 call immediately before initial control, if output or process are stale
 @c
-void takDdcSetOut(ddcParameters* pPar, int16_t min, int16_t max,
+void takDdcSetOut(ddcParameters* pPar_s, int16_t min, int16_t max,
                   int16_t output, int16_t process)
-{
- pPar->mMin = min;
- pPar->mMax = max;
- pPar->m = output;
- pPar->c_n3 = (pPar->c_n2 = (pPar->c_n1 = process));
-}
+@#{@#
+ pPar_s->mMin = min;
+ pPar_s->mMax = max;
+ pPar_s->m = output;
+ pPar_s->c_n3 = (pPar_s->c_n2 = (pPar_s->c_n1 = process));
+@#}@#
 
 @
 Here is a simple procedure to set thrust direction on the starboard motor.
@@ -1007,7 +1012,7 @@ For a timer tick at each $1\over 4$ second. We will use timer counter 2, our
 last timer.
 It only has an 8 bit prescaler so it will be too fast and will need to be
 divided---a lot.
-The prescaler is set to the maximum of 1024.
+The prescaler is set to it's maximum of 1024.
 The timer is set to \.{CTC} mode so that the time loop is trimable.
 That will be pretty fast so we need more division in software.
 We want to divide by a power of two so we can use a simple compare, and no

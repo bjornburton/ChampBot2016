@@ -45,7 +45,7 @@ WEB      := $(TARGET).w
 DOC      := $(TARGET).pdf
 TEXSRC   := $(TARGET).tex
 DOTSRC   := $(TARGET).dot
-EGYPTSRC := $(TARGET).c.*r.expand
+EGYPTSRC := $(TARGET).c.192r.expand
 GRAPH    := $(TARGET).png
 
 # The usual make stuff
@@ -88,6 +88,10 @@ clean:
 	-rm -f $(DOTSRC)
 	-rm -f $(EGYPTSRC)
 	-rm -f $(TARGET).s
+	-rm -f $(TARGET).scn
+	-rm -f $(TARGET).idx
+	-rm -f $(TARGET).toc
+
 	
 install:
 	$(PROGSW) $(PROGSWFLAGS) -c usbtiny -U flash:w:$(HEX)
