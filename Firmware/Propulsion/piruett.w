@@ -143,15 +143,17 @@ older word ``larboard''.
 @d OFF 0  // the mode of being surfaced
 @d REMOTE 1  // the mode of being surfaced
 @d DIVING 2    // the mode of actively diving
-@d SUBMERGED 3 //the mode of being submerged
+@d SUBMERGED 3 // the mode of being submerged
+@d PIDSAMPCT 4 // the PID sample count for derivatives
 
 @ @<Include...@>=
-# include  <avr/io.h> // need some port access
+# include <avr/io.h> // need some port access
 # include <avr/interrupt.h> // have need of an interrupt
 # include <avr/sleep.h> // have need of sleep
 # include <avr/wdt.h> // have need of watchdog
 # include <stdlib.h>
 # include <stdint.h>
+# include <assert.h>
 
 @
 This structure is for the PID or Direct Digital Control.
@@ -166,17 +168,17 @@ output to start with.
 |"mode"| can be manual or automatic;
 @<Types...@>=
 typedef struct {
-   int16_t k_p; // proportional action parameter
-   int16_t k_i; // integral action parameter in R/T
-   int16_t k_d; // derivative action parameter
-   int16_t t;   // sampling period
-   int16_t c_n1; // process one period behind
-   int16_t c_n2; // process two periods behind
-   int16_t c_n3; // process three periods behind
-   int16_t m;    // latest output
-   int16_t mMin; // min output
-   int16_t mMax; // max output
-   int8_t  mode; // 1 == automatic, 0 == manual
+   int16_t k_p;             // proportional action parameter
+   int16_t k_i;             // integral action parameter in R/T
+   int16_t k_d;             // derivative action parameter
+   int16_t t;               // sampling period
+   int16_t setpoint;        // setpoint
+   int16_t pPvN[PIDSAMPCT]; // process value history
+   int16_t *pPvLast;        // process value last
+   int16_t m;               // latest output
+   int16_t mMin;            // min output
+   int16_t mMax;            // max output
+   int8_t  mode;            // 1 == automatic, 0 == manual
    } ddcParameters;
 
 @ Here is a structure type to keep track of the state of
@@ -237,9 +239,7 @@ int16_t scaler(uint16_t input, uint16_t minIn,  uint16_t maxIn,
                                int16_t  minOut, int16_t  maxOut);
 int16_t int16clamp(int16_t value, int16_t min, int16_t max);
 void takDdcSetPid(ddcParameters*, int16_t p, int16_t i, int16_t d, int16_t t);
-void takDdcSetOut(ddcParameters*, int16_t min, int16_t max,
-                                   int16_t output, int16_t process);
-int16_t takDdc(ddcParameters*, int16_t setpoint, int16_t process);
+int16_t takDdc(ddcParameters*);
 
 @
 My lone global variable is a function pointer.
@@ -297,7 +297,7 @@ inputStruct* pInput_s = &(inputStruct){
             .k_i = 1,
             .k_d = 1,
             .t   = 1,
-            .m = 0,
+            .m   = 0,
             .mMin = INT16_MIN,
             .mMax = INT16_MAX,
             .mode = AUTOMATIC
@@ -576,7 +576,7 @@ if (!(++tickCount)) // every 256 ticks
      if (pInput_s->controlMode >= DIVING)
         {
          // do the PID stuff here?
-         takDdc(pInput_s->pPid_s,5,5);
+         takDdc(pInput_s->pPid_s);
          }
 
      wdt_reset(); /* watchdog timer is reset */
@@ -844,19 +844,17 @@ It's a unique form, since error is seen only through the integral.
 
 Takahashi suggested a four point difference for the derivative, if the
 signal is noisy.
-It may be very noisy so this feature has been included.
+Our signal may be very noisy so this feature has been included.
 Takahashi's four point difference was a bit involved, so to make this easy,
 I used numerical differentiation coefficients from the
 {\it CRC Standard Mathematical Tables, 27th Edition} (1985).
 The four point technique has also been extended to the proportional term.
-With that it will have some inherent filtering.
+With all that it will have some inherent filtering.
 
 A final difference from Takahashi's book form is that the integral is in
 terms of repeats per unit-time.
 
-
-This function takes a structure pointer, along with the setpoint and
-process.
+This function takes a structure pointer.
 That structure holds everything unique to the channel of control, including
 the process and output history.
 
@@ -870,36 +868,51 @@ integral and process's derivative.
 Finally, it is clamped to the limits, which could be of the integer's type.
 
 This function should be called with each process sample.
+
+In mode |"MANUAL"| it just moves the process variable history to the next
+location.
+
 @c
 
-int16_t takDdc(ddcParameters* pPar_s, int16_t setpoint, int16_t process)
+int16_t takDdc(ddcParameters* pPar_s)
 @#{@#
+ // these four coefficients are in sixths
+const int8_t derCoef[]={2, -9, 18, -11};
+// these four are in units
+const int8_t secDerCoef[]={2, -5, 4, -1};
+
+_Static_assert(sizeof(derCoef)/sizeof(derCoef[0]) == PIDSAMPCT,
+              "PID sample mismatch");
+_Static_assert(sizeof(secDerCoef)/sizeof(secDerCoef[0]) == PIDSAMPCT,
+              "PID sample mismatch");
+
+// index latest process variable
+uint8_t offset = pPar_s->pPvLast - pPar_s->pPvN;
+
+// age the process variable history
+pPar_s->pPvLast = pPar_s->pPvN + (offset+1)%PIDSAMPCT;
+
  if(pPar_s->mode == AUTOMATIC)
    {
-    int16_t dDer = ((-11) * pPar_s->c_n3 +
-                     (18) * pPar_s->c_n2 +
-                     (-9) * pPar_s->c_n1 +
-                      (2) * process)/(6);
+    int16_t dDer=0, dSecDer=0;
 
+    for(int8_t coIdx = 0;coIdx < PIDSAMPCT;coIdx++)
+         {
+         dDer += derCoef[coIdx] * *(pPar_s->pPvN+offset%PIDSAMPCT);
+         dSecDer += secDerCoef[coIdx] * *(pPar_s->pPvN+offset%PIDSAMPCT);
+         offset++;
+         }
+    // since the derivative was in sixths we must divide by six
+    dDer /= 6;
 
-    int16_t dSecDer = (-1)*pPar_s->c_n3 +
-                       (4)*pPar_s->c_n2 +
-                      (-5)*pPar_s->c_n1 +
-                       (2)*process;
-
-
-    int16_t err = setpoint - process;
+    int16_t err = pPar_s->setpoint - *pPar_s->pPvLast;
 
     pPar_s->m += pPar_s->k_p*(dDer + pPar_s->k_i*err - pPar_s->k_d*dSecDer);
 
     pPar_s->m = int16clamp(pPar_s->m, pPar_s->mMin, pPar_s->mMax);
    }
 
- // age the process value history regardless
- pPar_s->c_n3 = pPar_s->c_n2;
- pPar_s->c_n2 = pPar_s->c_n1;
- pPar_s->c_n1 = process;
-
+ 
  return pPar_s->m;
 @#}@#
 
@@ -914,21 +927,11 @@ void takDdcSetPid(ddcParameters* pPar_s, int16_t p, int16_t i, int16_t d,
  pPar_s->k_p = (int16_t)p;
  pPar_s->k_i = (int16_t)i / pPar_s->t;
  pPar_s->k_d = (int16_t)d / pPar_s->t;
+
+ // set the process value pointer to the first position
+ pPar_s->pPvLast = pPar_s->pPvN;
 @#}@#
 
-@
-Takahashi Discrete Digital Control Output initialization
-call this once to set parameters, or when they are changed
-call immediately before initial control, if output or process are stale
-@c
-void takDdcSetOut(ddcParameters* pPar_s, int16_t min, int16_t max,
-                  int16_t output, int16_t process)
-@#{@#
- pPar_s->mMin = min;
- pPar_s->mMax = max;
- pPar_s->m = output;
- pPar_s->c_n3 = (pPar_s->c_n2 = (pPar_s->c_n1 = process));
-@#}@#
 
 @
 Here is a simple procedure to set thrust direction on the starboard motor.
