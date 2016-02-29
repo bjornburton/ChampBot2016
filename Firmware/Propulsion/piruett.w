@@ -174,7 +174,7 @@ typedef struct {
    int16_t t;               // sampling period
    int16_t setpoint;        // setpoint
    int16_t pPvN[PIDSAMPCT]; // process value history
-   int16_t *pPvLast;        // process value last
+   int16_t *pPvLast;        // process value latest location
    int16_t m;               // latest output
    int16_t mMin;            // min output
    int16_t mMax;            // max output
@@ -867,10 +867,10 @@ That results in a correction based on the process's proportional, the error's
 integral and process's derivative.
 Finally, it is clamped to the limits, which could be of the integer's type.
 
-This function should be called with each process sample.
+This function should be called right after a fresh process variable has been
+written to |"pPvLast"|.
 
-In mode |"MANUAL"| it just moves the process variable history to the next
-location.
+In mode |"MANUAL"| it just increments the process variable location.
 
 @c
 
@@ -889,7 +889,7 @@ _Static_assert(sizeof(secDerCoef)/sizeof(secDerCoef[0]) == PIDSAMPCT,
 // index latest process variable
 uint8_t offset = pPar_s->pPvLast - pPar_s->pPvN;
 
-// age the process variable history
+// update the location for the next sample 
 pPar_s->pPvLast = pPar_s->pPvN + (offset+1)%PIDSAMPCT;
 
  if(pPar_s->mode == AUTOMATIC)
