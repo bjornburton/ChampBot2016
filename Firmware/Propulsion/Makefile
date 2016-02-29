@@ -26,7 +26,7 @@ EGYPT     := egypt
 TANGLE    := ctangle
 WEAVE     := cweave
 TEX       := pdftex
-CFLAGS    :=  -std=c11 -g -mmcu=$(MCU) -Wall -Os -pedantic -fdump-rtl-expand
+CFLAGS    :=  -std=iso9899:2011 -g -mmcu=$(MCU) -Wall -Os -pedantic -fdump-rtl-expand
 AFLAGS    :=  -S
 CONV      :=avr-objcopy
 CONVFLAGS := -j .text -j .data -O ihex

@@ -143,15 +143,17 @@ older word ``larboard''.
 @d OFF 0  // the mode of being surfaced
 @d REMOTE 1  // the mode of being surfaced
 @d DIVING 2    // the mode of actively diving
-@d SUBMERGED 3 //the mode of being submerged
+@d SUBMERGED 3 // the mode of being submerged
+@d PIDSAMPCT 4 // the PID sample count for derivatives
 
 @ @<Include...@>=
-# include  <avr/io.h> // need some port access
+# include <avr/io.h> // need some port access
 # include <avr/interrupt.h> // have need of an interrupt
 # include <avr/sleep.h> // have need of sleep
 # include <avr/wdt.h> // have need of watchdog
 # include <stdlib.h>
 # include <stdint.h>
+# include <assert.h>
 
 @
 This structure is for the PID or Direct Digital Control.
@@ -166,17 +168,17 @@ output to start with.
 |"mode"| can be manual or automatic;
 @<Types...@>=
 typedef struct {
-   int16_t k_p;      // proportional action parameter
-   int16_t k_i;      // integral action parameter in R/T
-   int16_t k_d;      // derivative action parameter
-   int16_t t;        // sampling period
-   int16_t setpoint; // setpoint
-   int16_t pPvN[4];   // process value history
-   int16_t *pPvLast;  // process value last
-   int16_t m;        // latest output
-   int16_t mMin;     // min output
-   int16_t mMax;     // max output
-   int8_t  mode;     // 1 == automatic, 0 == manual
+   int16_t k_p;             // proportional action parameter
+   int16_t k_i;             // integral action parameter in R/T
+   int16_t k_d;             // derivative action parameter
+   int16_t t;               // sampling period
+   int16_t setpoint;        // setpoint
+   int16_t pPvN[PIDSAMPCT]; // process value history
+   int16_t *pPvLast;        // process value last
+   int16_t m;               // latest output
+   int16_t mMin;            // min output
+   int16_t mMax;            // max output
+   int8_t  mode;            // 1 == automatic, 0 == manual
    } ddcParameters;
 
 @ Here is a structure type to keep track of the state of
@@ -874,59 +876,33 @@ location.
 
 int16_t takDdc(ddcParameters* pPar_s)
 @#{@#
-
-uint8_t offset = pPar_s->pPvLast - pPar_s->pPvN;
-
-int16_t *pPvN_3 = pPar_s->pPvN + (++offset&0xfc);
-int16_t *pPvN_2 = pPar_s->pPvN + (++offset&0xfc);
-int16_t *pPvN_1 = pPar_s->pPvN + (++offset&0xfc);
-
- if(pPar_s->mode == AUTOMATIC)
-   {
-    int16_t dDer = ((-11) *  *pPvN_3 +
-                     (18) *  *pPvN_2 +
-                     (-9) *  *pPvN_1 +
-                      (2) * (*pPar_s->pPvLast))/(6);
-
-    int16_t dSecDer = (-1) *  *pPvN_3 +
-                       (4) *  *pPvN_2 +
-                      (-5) *  *pPvN_1 +
-                       (2) * (*pPar_s->pPvLast);
-
-    int16_t err = pPar_s->setpoint - *pPar_s->pPvLast;
-
-    pPar_s->m += pPar_s->k_p*(dDer + pPar_s->k_i*err - pPar_s->k_d*dSecDer);
-
-    pPar_s->m = int16clamp(pPar_s->m, pPar_s->mMin, pPar_s->mMax);
-   }
-
- // age the process variable history regardless
- pPar_s->pPvLast++;
- 
- return pPar_s->m;
-@#}@#
-
-
-int16_t takDdc(ddcParameters* pPar_s)
-@#{@#
-
- // these are in sixths
+ // these four coefficients are in sixths
 const int8_t derCoef[]={2, -9, 18, -11};
-// these are in units
+// these four are in units
 const int8_t secDerCoef[]={2, -5, 4, -1};
+
+_Static_assert(sizeof(derCoef)/sizeof(derCoef[0]) == PIDSAMPCT,
+              "PID sample mismatch");
+_Static_assert(sizeof(secDerCoef)/sizeof(secDerCoef[0]) == PIDSAMPCT,
+              "PID sample mismatch");
 
 // index latest process variable
 uint8_t offset = pPar_s->pPvLast - pPar_s->pPvN;
 
+// age the process variable history
+pPar_s->pPvLast = pPar_s->pPvN + (offset+1)%PIDSAMPCT;
+
  if(pPar_s->mode == AUTOMATIC)
    {
+    int16_t dDer=0, dSecDer=0;
 
-    for(int8_t coIdx = 0;coIdx > 4;coIdx++)
+    for(int8_t coIdx = 0;coIdx < PIDSAMPCT;coIdx++)
          {
-         dDer += derCoef[coIdx] * *(pPar_s->pPvN+offset);
-         dSecDer += secDerCoef[coIdx] * *(pPar_s->pPvN+offset);
-         offset = (offset+1) & 0xfc;
+         dDer += derCoef[coIdx] * *(pPar_s->pPvN+offset%PIDSAMPCT);
+         dSecDer += secDerCoef[coIdx] * *(pPar_s->pPvN+offset%PIDSAMPCT);
+         offset++;
          }
+    // since the derivative was in sixths we must divide by six
     dDer /= 6;
 
     int16_t err = pPar_s->setpoint - *pPar_s->pPvLast;
@@ -936,8 +912,6 @@ uint8_t offset = pPar_s->pPvLast - pPar_s->pPvN;
     pPar_s->m = int16clamp(pPar_s->m, pPar_s->mMin, pPar_s->mMax);
    }
 
- // age the process variable history regardless
- pPar_s->pPvLast++;
  
  return pPar_s->m;
 @#}@#
