@@ -24,7 +24,7 @@ CC        := avr-gcc
 DOT       := dot 
 EGYPT     := egypt 
 TANGLE    := ctangle
-WEAVE     := cweave
+WEAVE     := ~/avrfun/cweb/cweave
 TEX       := pdftex
 CFLAGS    :=  -std=iso9899:2011 -g -mmcu=$(MCU) -Wall -Os -pedantic -fdump-rtl-expand
 AFLAGS    :=  -S

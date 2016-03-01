@@ -116,7 +116,7 @@ older word ``larboard''.
 @< Prototypes @>@;
 @< Global variables @>@;
 
-@ |"F_CPU"| is used to convey the Trinket Pro clock rate.
+@ |F_CPU| is used to convey the Trinket Pro clock rate.
 @d F_CPU 16000000UL
 
 @ Here are some Boolean definitions that are used.
@@ -134,7 +134,7 @@ older word ``larboard''.
 @d MANUAL 0
 @d STOPPED 0
 
-@ Here are some other definitions. It is critical that |"MAX_DUTYCYCLE"| is
+@ Here are some other definitions. It is critical that |MAX_DUTYCYCLE| is
 98\% or less.
 @d CH2RISE 0   // rising edge of RC's remote channel 2
 @d CH2FALL 1   // falling edge of RC's remote channel 2
@@ -157,15 +157,15 @@ older word ``larboard''.
 
 @
 This structure is for the PID or Direct Digital Control.
-|"k_p"|is the proportional coefficient.
+|k_p| is the proportional coefficient.
 The larger it is, the bigger will be the effect of PID.
-|"k_i"| is the integral coefficient in resets per unit-time.
-|"k_d"| is the derivative coefficient.
-|"m"| is the output. Whatever is minimal energy is probably a good
+|k_i| is the integral coefficient in resets per unit-time.
+|k_d| is the derivative coefficient.
+|m| is the output. Whatever is minimal energy is probably a good
 output to start with.
-|"min"| is the minimum allowed output.
-|"max"| is the maximum allowed output.
-|"mode"| can be manual or automatic;
+|min| is the minimum allowed output.
+|max| is the maximum allowed output.
+|mode| can be manual or automatic;
 @<Types...@>=
 typedef struct {
    int16_t k_p;             // proportional action parameter
@@ -184,7 +184,7 @@ typedef struct {
 @ Here is a structure type to keep track of the state of
 inputs, e.g. servo timing.
 Rise and Fall indicate the \.{PWC} edge times.
-|"edge"| is set to the edge type expected for the interrupt.
+|edge| is set to the edge type expected for the interrupt.
 
 @<Types...@>=
 typedef struct {
@@ -245,21 +245,21 @@ int16_t takDdc(ddcParameters*);
 My lone global variable is a function pointer.
 This lets me pass arguments to the actual interrupt handlers and acts a bit
 like a stack to store the next action.
-This pointer gets the appropriate function attached by the |"ISR()"| function.
+This pointer gets the appropriate function attached by the |ISR()| function.
 
 This input structure is to contain all of the external inputs.
 
 @<Global var...@>=
-void (*handleIrq)(inputStruct *) = NULL;
+void @[@] (*handleIrq)(inputStruct *) = NULL;
 
-@#
+@/
 
 int main(void)
-@#{@#
+@/{@/
 
 @
 The Futaba receiver leads with channel two, rising edge, so we will start
-looking for that by setting |"edge"| to look for a rise on channel 2.
+looking for that by setting |edge| to look for a rise on channel 2.
 
 Center position of the controller results in a count of about 21250, hard
 larboard, or forward, with trim reports about 29100 and hard starboard, or
@@ -268,7 +268,7 @@ reverse, with trim reports about 13400.
 About $4 \over 5$ of that range are the full swing of the stick, without trim.
 This is from about 14970 and 27530 ticks.
 
-|".minIn"| |".maxIn"| are the endpoints of the normal stick travel.
+|.minIn| |.maxIn| are the endpoints of the normal stick travel.
 The units are raw counts as the Input Capture Register will use.
 
 At some point a calibration feature could be added which could populate these
@@ -286,31 +286,30 @@ const int16_t maxOut = INT16_MAX;  // maximum value of thrust
 @
 Initially we will have the motors off and wait for the first rising edge
 from the remote. The PID parameters are instantiated and loaded with safe
-defaults. |"takDdcSetpin"| and |"takDdcSetOut()"| are used to set the
+defaults. |takDdcSetPid()| is used to set the
 parameters. 
 @c
-inputStruct* pInput_s = &(inputStruct){
-    .edge = CH2RISE,
-    .controlMode = OFF,
-    .pPid_s  = &(ddcParameters){
-            .k_p = 1,
-            .k_i = 1,
-            .k_d = 1,
-            .t   = 1,
-            .m   = 0,
-            .mMin = INT16_MIN,
-            .mMax = INT16_MAX,
-            .mode = AUTOMATIC
-           }
+inputStruct* pInput_s = &(inputStruct){@/
+    @[@].edge = CH2RISE,@/
+    @[@].controlMode = OFF,@/
+    @[@].pPid_s  = &(ddcParameters){@/
+        @t\hskip 1in@> @[@] .k_p = 1,@/
+        @t\hskip 1in@>@[@]  .k_i = 1,@/
+        @t\hskip 1in@>@[@] .k_d = 1,@/
+        @t\hskip 1in@>@[@] .t   = 1,@/
+        @t\hskip 1in@>@[@]  .m   = 0,@/
+        @t\hskip 1in@>@[@] .mMin = INT16_MIN,@/
+        @t\hskip 1in@>@[@] .mMax = INT16_MAX,@/
+        @t\hskip 1in@>@[@] .mode = AUTOMATIC@/
+        @t\hskip 1in@>}@/
     };
 
 
 @
 This is the structure that holds output parameters.
-It's instantiated with the endpoint constants.
 @c
 transStruct* pTranslation_s = &(transStruct){
-    .deadBand = 10
+    @[@].deadBand = 10
     };
 
 
@@ -318,18 +317,18 @@ transStruct* pTranslation_s = &(transStruct){
 Here the interrupts are disabled so that configuring them doesn't set it off.
 @c
  cli();
-@#
+@/
 @<Initialize the inputs and capture mode...@>
 @<Initialize tick timer...@>
 @<Initialize pin outputs...@>
 @<Initialize watchdog timer...@>
-@#
+@/
 @
 Any interrupt function requires that bit ``Global Interrupt Enable''
-is set; usually done through calling |"sei()"|.
+is set.
 @c
   sei();
-@#
+@/
 
 @
 
@@ -341,8 +340,8 @@ The \.{PWM} is used to control larboard and starboard motors through \.{OC0A}
 
 @
 Rather than burning loops, waiting the ballance of 18~ms for something to
-happen, the |"sleep"| mode is used.
-The specific type of sleep is |"idle"|.
+happen, the |sleep| mode is used.
+The specific type of sleep is |idle|.
 In idle, execution stops but timers, like the Input Capture Unit and \.{PWM}
 continue to operate.
 Another thing that will happen during sleep is an \.{ADC} conversion from the
@@ -356,14 +355,14 @@ This stumped me for a good while.
 @c
 
 @<Configure to idle on sleep...@>
-@#
+@/
 
 ledCntl(OFF);
 
 @
-Since |"edge"| is already set, calling |"edgeSelect()"| will get it ready for
+Since |edge| is already set, calling |edgeSelect()| will get it ready for
 the first rising edge of channel~2.
-Subsequent calls to |"edgeSelect"| rotates it to the next edge type.
+Subsequent calls to |edgeSelect| rotates it to the next edge type.
 @c
 edgeSelect(pInput_s);
 
@@ -375,13 +374,13 @@ interrupt event caused by an edge or watchdog timeout.
 
 
  for (;;)
-  {@#
+  {@/
 
 @
 Now that a loop is started, the \.{PWM} is value and we wait in
-|"idle"| for the edge on the channel selected.
+|idle| for the edge on the channel selected.
 Each sucessive loop will finish in the same way.
-After three passes |"translation_s"| will have good values.
+After three passes |translation_s| will have good values.
 
 @c
 
@@ -390,7 +389,7 @@ After three passes |"translation_s"| will have good values.
 @
 If execution arrives here, some interrupt has woken it from sleep and some
 vector has possibly run. That possibility is first checked.
-The pointer |"handleIrq"| will be assigned the value of the responsible
+The pointer |handleIrq| will be assigned the value of the responsible
 function and then executed.
 After that the \.{IRQ} is nulled so as to avoid repeating the action, should it
 wake-up for some other reason.
@@ -398,7 +397,7 @@ wake-up for some other reason.
 
 @c
 if (handleIrq != NULL)
-   {@#
+   {@/
     handleIrq(pInput_s);
     handleIrq = NULL;
     }
@@ -446,14 +445,14 @@ if(pTranslation_s->larboardOut || pTranslation_s->starboardOut)
  else
     ledCntl(ON);
 
-@#
+@/
   } /* end for */
-@#
+@/
 
 
 return 0;
-@#
-}@# /* end main() */
+@/
+}@/ /* end main() */
 
 
 @* Supporting routines, functions, procedures and configuration
@@ -465,9 +464,9 @@ Escentialy it grabs and processes the ``Input Capture'' data.
 @c
 
 ISR (TIMER1_CAPT_vect)
-@#{@#
+@/{@/
  handleIrq = &pwcCalc;
-@#}@#
+@/}@/
 
 @
 Here is the \.{ISR} that fires at at about 64 Hz for the main dive tick.
@@ -475,9 +474,9 @@ This is used for the dive-control loop.
 @c
 
 ISR (TIMER2_COMPA_vect)
-@#{@#
+@/{@/
  handleIrq = &diveTick;
-@#}@#
+@/}@/
 
 @
 Here is the \.{ISR} that fires after a successful \.{ADC} conversion.
@@ -485,20 +484,20 @@ The \.{ADC} is used to determine depth from pressure.
 @c
 
 ISR (ADC_vect)
-@#{@#
+@/{@/
  handleIrq = &pressureCalc;
-@#}@#
+@/}@/
 
 
 @
 When the watchdog timer expires, this vector is called.
 This is what happens if the remote's transmitter signal is not received.
-It calls a variant of |"pwcCalc"| that only sets the controlMode to OFF.
+It calls a variant of |pwcCalc| that only sets the controlMode to OFF.
 @c
 ISR (WDT_vect)
-@#{@#
+@/{@/
  handleIrq = &lostSignal;
-@#}@#
+@/}@/
 
 @
 This procedure computes the durations from the \.{PWC} signal edge capture
@@ -511,7 +510,7 @@ of the $2^{16}$~counts of the 16~bit register.
 
 @c
 void pwcCalc(inputStruct *pInput_s)
-@#{@#
+@/{@/
 @
 On the falling edges we can compute the durations using modulus subtraction
 and then set the edge index for the next edge.
@@ -541,18 +540,18 @@ the flag.
 @t\hskip 1in@>  }
 
 edgeSelect(pInput_s);
-@#}@#
+@/}@/
 
 @
 This procedure sets output to zero in the event of a lost signal.
 @c
 void lostSignal(inputStruct *pInput_s)
-@#{@#
+@/{@/
  pInput_s->controlMode = OFF;
  pInput_s->edge = CH2RISE;
 
  edgeSelect(pInput_s);
-@#}@#
+@/}@/
 
 @
 This procedure  will count off ticks for a $1\over 4$ second event.
@@ -560,7 +559,7 @@ Every tick it will setup ADC to get pressure sensor values during idle.
 
 @c
 void diveTick(inputStruct *pInput_s)
-@#{@#
+@/{@/
 static uint8_t tickCount = 0;
 
 // we are here 64 times per second
@@ -582,7 +581,7 @@ if (!(++tickCount)) // every 256 ticks
      wdt_reset(); /* watchdog timer is reset */
     }
 
-@#}@#
+@/}@/
 
 
 @
@@ -593,11 +592,11 @@ There is a moving average filter of size 32 or about $1 \over 2$ second in
 size.
 That size is efficient since the division is a binary right shift of 5 places.
 Since the \.{ADC} is a mere 10 bits, and $2^{10} \times 32$ is only $2^{15}$,
-the sum may safely be of size |"uint16_t"|.
+the sum may safely be of size |uint16_t|.
 
 @c
 void pressureCalc(inputStruct *pInput_s)
-@#{@#
+@/{@/
  static uint16_t buffStart[33];
  const  uint16_t *buffEnd = buffStart+33;
  static uint16_t *buffIndex = buffStart;
@@ -612,7 +611,7 @@ void pressureCalc(inputStruct *pInput_s)
 
  pInput_s->pressure = (sum>>5);
 
-@#}@#
+@/}@/
 
 
 @
@@ -621,7 +620,7 @@ the expected edge type.
 
 @c
 void edgeSelect(inputStruct *pInput_s)
-@#{@#
+@/{@/
 
   switch(pInput_s->edge)
      {
@@ -643,7 +642,7 @@ It seems odd but clearing it involves writing a one to it.
 @c
 
  TIFR1 |= (1<<ICF1); /* (per 16.6.3) */
-@#}@#
+@/}@/
 
 
 @
@@ -651,14 +650,14 @@ It seems odd but clearing it involves writing a one to it.
 @
 The scaler function takes an input, in time, from the Input Capture
 Register and returns a value scaled by the parameters in structure
-|"inputScale_s"|.
+|inputScale_s|.
 @c
 int16_t scaler(uint16_t input,
                uint16_t minIn,
                uint16_t maxIn,
                 int16_t minOut,
                 int16_t maxOut)
-@#{@#
+@/{@/
 @
 First, we can solve for the obvious cases.
 This can easily happen if the trim is shifted and the lever is at its limit.
@@ -678,7 +677,7 @@ This is not really an efficient method, recomputing gain and offset every time
 but we are not in a rush and it makes it easier since, if something changes,
 I don't have to manualy compute and enter these value.
 
-The constant |"ampFact"| amplifies values for math to take advantage of
+The constant |ampFact| amplifies values for math to take advantage of
 the high bits for precision.
 
 @c
@@ -690,28 +689,28 @@ int32_t offset = ((ampFact*(int32_t)minIn)/gain)-(int32_t)minOut;
 
 return (ampFact*(int32_t)input/gain)-offset;
 
-@#}@#
+@/}@/
 
 @
-We need a way to translate |"thrust"| and |"radius"| in order to carve a
+We need a way to translate |thrust| and |radius| in order to carve a
 turn. This procedure should do this but it's not going to be perfect as
 drag and slippage make thrust increase progressivly more than speed.
 Since the true speed is not known, we will use thrust.
 It should steer OK as long as the speed is constant and small changes in speed
 should not be too disruptive.
-The sign of |"larboardOut"| and |"starboardOut"| indicates direction.
-As befire, the constant |"ampFact"| amplifies values for math so to take
+The sign of |larboardOut| and |starboardOut| indicates direction.
+As before, the constant |ampFact| amplifies values for math so to take
 advantage of the high bits for precision.
  bits.
 
-This procedure is intended for values from -255 to 255 or |"INT16_MIN"| to
-|"INT16_MAX"|.
+This procedure is intended for values from -255 to 255 or |INT16_MIN| to
+|INT16_MAX|.
 
-|"max"| is set to support the limit of the bridge-driver's charge-pump.
+|max| is set to support the limit of the bridge-driver's charge-pump.
 @c
 
 void translate(transStruct *trans_s)
-@#{@#
+@/{@/
 int16_t speed = trans_s->thrust; /* we are assuming it's close */
 int16_t rotation;
 int16_t difference;
@@ -724,8 +723,8 @@ const int16_t ampFact = 128;
 
 @
 Here we convert desired radius to thrust-difference by scaling to speed.
-Then that difference is converted to rotation by scaling it with |"track"|.
-The radius sensitivity is adjusted by changing the value of |"track"|.
+Then that difference is converted to rotation by scaling it with |track|.
+The radius sensitivity is adjusted by changing the value of |track|.
 
 @c
  difference = (speed * ((ampFact * trans_s->radius)/UINT8_MAX))/ampFact;
@@ -760,7 +759,7 @@ For starboard, piruett is reversed, making it rotate counter to larboard.
     piruett = -piruett;
     trans_s->starboardOut = int16clamp(piruett, -max, max);
     }
-@#}@#
+@/}@/
 
 
 
@@ -769,7 +768,7 @@ This procedure sets the signal to the H-Bridge.
 For the \.{PWM} we load the value into the unsigned registers.
 @c
 void setPwm(int16_t larboardOut, int16_t starboardOut)
-@#{@#
+@/{@/
 
  if (larboardOut >= 0)
      {
@@ -801,35 +800,35 @@ We must see if the fail-safe relay needs to be closed.
   else
     relayCntl(OPEN);
 
-@#}@#
+@/}@/
 
 @
 Here is a simple procedure to flip the \.{LED} on or off.
 @c
 void ledCntl(int8_t state)
-@#{@#
+@/{@/
   PORTB = state ? PORTB | (1<<PORTB5) : PORTB & ~(1<<PORTB5);
-@#}@#
+@/}@/
 
 @
 Here is a simple procedure to flip the Relay Closed or Open from pin \#8.
 @c
 void relayCntl(int8_t state)
-@#{@#
+@/{@/
  PORTB = state ? PORTB | (1<<PORTB0):PORTB & ~(1<<PORTB0);
-@#}@#
+@/}@/
 
 @
 Here is a simple procedure to set thrust direction on the larboard motor.
 @c
 void larboardDirection(int8_t state)
-@#{@#
+@/{@/
  if(state)
     PORTD &= ~(1<<PORTD3);
   else
     PORTD |= (1<<PORTD3);
 
-@#}@#
+@/}@/
 
 
 @
@@ -868,29 +867,31 @@ integral and process's derivative.
 Finally, it is clamped to the limits, which could be of the integer's type.
 
 This function should be called right after a fresh process variable has been
-written to |"pPvLast"|.
+written to |pPvLast|.
 
-In mode |"MANUAL"| it just increments the process variable location.
+In mode |MANUAL| it just increments the process variable location.
 
 @c
 
 int16_t takDdc(ddcParameters* pPar_s)
-@#{@#
- // these four coefficients are in sixths
-const int8_t derCoef[]={2, -9, 18, -11};
-// these four are in units
+@/{@/
+ const int8_t derCoef[]={2, -9, 18, -11};
+                                // these four coefficients are in sixths
+
 const int8_t secDerCoef[]={2, -5, 4, -1};
+                                // these four are in units
 
 _Static_assert(sizeof(derCoef)/sizeof(derCoef[0]) == PIDSAMPCT,
               "PID sample mismatch");
 _Static_assert(sizeof(secDerCoef)/sizeof(secDerCoef[0]) == PIDSAMPCT,
               "PID sample mismatch");
 
-// index latest process variable
 uint8_t offset = pPar_s->pPvLast - pPar_s->pPvN;
+                                // index latest process variable
 
-// update the location for the next sample 
 pPar_s->pPvLast = pPar_s->pPvN + (offset+1)%PIDSAMPCT;
+                                // update the location for the next sample 
+
 
  if(pPar_s->mode == AUTOMATIC)
    {
@@ -902,8 +903,8 @@ pPar_s->pPvLast = pPar_s->pPvN + (offset+1)%PIDSAMPCT;
          dSecDer += secDerCoef[coIdx] * *(pPar_s->pPvN+offset%PIDSAMPCT);
          offset++;
          }
-    // since the derivative was in sixths we must divide by six
     dDer /= 6;
+             // since the derivative was in sixths we must divide by six
 
     int16_t err = pPar_s->setpoint - *pPar_s->pPvLast;
 
@@ -914,7 +915,7 @@ pPar_s->pPvLast = pPar_s->pPvN + (offset+1)%PIDSAMPCT;
 
  
  return pPar_s->m;
-@#}@#
+@/}@/
 
 @
  Takahashi Discrete Digital Control PID and Period initialization.
@@ -922,7 +923,7 @@ pPar_s->pPvLast = pPar_s->pPvN + (offset+1)%PIDSAMPCT;
 @c
 void takDdcSetPid(ddcParameters* pPar_s, int16_t p, int16_t i, int16_t d,
                   int16_t t)
-@#{@#
+@/{@/
  pPar_s->t = t;
  pPar_s->k_p = (int16_t)p;
  pPar_s->k_i = (int16_t)i / pPar_s->t;
@@ -930,27 +931,27 @@ void takDdcSetPid(ddcParameters* pPar_s, int16_t p, int16_t i, int16_t d,
 
  // set the process value pointer to the first position
  pPar_s->pPvLast = pPar_s->pPvN;
-@#}@#
+@/}@/
 
 
 @
 Here is a simple procedure to set thrust direction on the starboard motor.
 @c
 void starboardDirection(int8_t state)
-@#{@#
+@/{@/
  if(state)
     PORTD &= ~(1<<PORTD4);
   else
     PORTD |= (1<<PORTD4);
-@#}@#
+@/}@/
 
 @
 A simple 16 bit clamp function.
 @c
 int16_t int16clamp(int16_t value, int16_t min, int16_t max)
-@#{@#
+@/{@/
  return (value > max)?max:(value < min)?min:value;
-@#}@#
+@/}@/
 
 @ @<Initialize pin outputs...@>=
  // set the led port direction; This is pin \#17
@@ -1027,12 +1028,12 @@ divisor, is
 $f={f_{CPU}\over{divisor \times prescale \times(1+register_{compare})}}$
  or
 ${16\times10^6\over{256 \times 1024 \times(1+243)}}\approx 0.25 seconds$.
-The interrupt is enabled \.{TIMSK2} for output compare register |"A"|.
+The interrupt is enabled \.{TIMSK2} for output compare register |A|.
 With all that we will have interrupt \.{TIMER2} \.{COMPA} fire every 31 ms.
 For the software division we will increment an uint8\_t in the handler on each
 pass and do something at both 0 and 128.
-The test could look a bit like |"!(++tickCount \& ~"|divisor|"U)"| except at
-256; but we are at 256 so |"!(++tickCount")| will do.
+The test could look a bit like |"!(++tickCount \& ~|divisor|U)"| except at
+256; but we are at 256 so |"!(++tickCount)"| will do.
 
 @ @<Initialize tick timer...@>=
 {
@@ -1063,7 +1064,7 @@ Timer Count 0 is configured for ``Phase Correct'' \.{PWM} which, according to
 the datasheet, is preferred for motor control.
 \.{OC0A} (port) and \.{OC0B} (starboard) are used for \.{PWM}.
 The prescaler is set to clk/8 and with a 16 MHz clock the $f$ is about 3922~Hz.
-We are using |"Set"| on comparator match to invert the \.{PWM}, suiting the
+We are using |Set| on comparator match to invert the \.{PWM}, suiting the
 glue-logic  which drives the H-Bridge.
 @ @<Initialize the Timer Counter 0 for PWM...@>=
 {
