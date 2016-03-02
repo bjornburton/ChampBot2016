@@ -154,7 +154,6 @@ older word ``larboard''.
 # include <stdlib.h>
 # include <stdint.h>
 # include <assert.h>
-
 @
 This structure is for the PID or Direct Digital Control.
 |k_p| is the proportional coefficient.
@@ -849,6 +848,8 @@ I used numerical differentiation coefficients from the
 {\it CRC Standard Mathematical Tables, 27th Edition} (1985).
 The four point technique has also been extended to the proportional term.
 With all that it will have some inherent filtering.
+The coefficents in the array are arranged in order,
+to use on the oldest to latest sample.
 
 A final difference from Takahashi's book form is that the integral is in
 terms of repeats per unit-time.
@@ -857,25 +858,33 @@ This function takes a structure pointer.
 That structure holds everything unique to the channel of control, including
 the process and output history.
 
-First the derivitives are calculated, from the four last samples of the
-process variable, using the coefficients.
+The variable |offset| is set and used to move |pPvLast| to the destination of
+the next process sample.
+This location is the present location of the oldest sample.
+In mode |MANUAL| it just returns from here, but in |AUTOMATIC| the output
+is updated.
+
+In updating the output, the derivitives are calculated,
+from the four last samples of the process variable, using the coefficients.
+This begins at the oldest sample, indicated by offest, and walks to the last.
+
 Next, the error between process and setpoint is computed.
 We then integrate the process variable's derivative, the error and the
 process variable's second derivative.
 That results in a correction based on the process's proportional, the error's
 integral and process's derivative.
-Finally, it is clamped to the limits, which could be of the integer's type.
 
-This function should be called right after a fresh process variable has been
+Finally, the running output is clamped to the limits,
+which could be the limits of the integer's type, or something smaller.
+
+This function should be called whenever a fresh process variable has been
 written to |pPvLast|.
-
-In mode |MANUAL| it just increments the process variable location.
 
 @c
 
 int16_t takDdc(ddcParameters* pPar_s)
 @/{@/
- const int8_t derCoef[]={2, -9, 18, -11};
+const int8_t derCoef[]={2, -9, 18, -11};
                                 // these four coefficients are in sixths
 
 const int8_t secDerCoef[]={2, -5, 4, -1};
@@ -887,11 +896,13 @@ _Static_assert(sizeof(secDerCoef)/sizeof(secDerCoef[0]) == PIDSAMPCT,
               "PID sample mismatch");
 
 uint8_t offset = pPar_s->pPvLast - pPar_s->pPvN;
-                                // index latest process variable
+                                // locate latest process variable
 
-pPar_s->pPvLast = pPar_s->pPvN + (offset+1)%PIDSAMPCT;
+pPar_s->pPvLast = pPar_s->pPvN + (++offset)%PIDSAMPCT;
                                 // update the location for the next sample 
 
+@/
+// at this point offset points at the oldest sample
 
  if(pPar_s->mode == AUTOMATIC)
    {
@@ -899,9 +910,9 @@ pPar_s->pPvLast = pPar_s->pPvN + (offset+1)%PIDSAMPCT;
 
     for(int8_t coIdx = 0;coIdx < PIDSAMPCT;coIdx++)
          {
-         dDer += derCoef[coIdx] * *(pPar_s->pPvN+offset%PIDSAMPCT);
-         dSecDer += secDerCoef[coIdx] * *(pPar_s->pPvN+offset%PIDSAMPCT);
-         offset++;
+          dDer += derCoef[coIdx] * *(pPar_s->pPvN+offset%PIDSAMPCT);
+          dSecDer += secDerCoef[coIdx] * *(pPar_s->pPvN+offset%PIDSAMPCT);
+          offset++;
          }
     dDer /= 6;
              // since the derivative was in sixths we must divide by six

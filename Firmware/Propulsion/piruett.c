@@ -37,12 +37,11 @@
 # include <stdlib.h> 
 # include <stdint.h> 
 # include <assert.h> 
-
 /*:6*/
 #line 114 "./piruett.w"
 
 /*7:*/
-#line 169 "./piruett.w"
+#line 168 "./piruett.w"
 
 typedef struct{
 int16_t k_p;
@@ -59,7 +58,7 @@ int8_t mode;
 }ddcParameters;
 
 /*:7*//*8:*/
-#line 189 "./piruett.w"
+#line 188 "./piruett.w"
 
 typedef struct{
 uint16_t ch2rise;
@@ -76,7 +75,7 @@ ddcParameters*pPid_s;
 }inputStruct;
 
 /*:8*//*9:*/
-#line 205 "./piruett.w"
+#line 204 "./piruett.w"
 
 typedef struct{
 int16_t thrust;
@@ -88,7 +87,7 @@ const int8_t deadBand;
 }transStruct;
 
 /*:9*//*10:*/
-#line 217 "./piruett.w"
+#line 216 "./piruett.w"
 
 typedef struct{
 uint16_t diveTime;
@@ -102,7 +101,7 @@ int16_t larboardOut;
 #line 115 "./piruett.w"
 
 /*11:*/
-#line 226 "./piruett.w"
+#line 225 "./piruett.w"
 
 void relayCntl(int8_t state);
 void ledCntl(int8_t state);
@@ -125,7 +124,7 @@ int16_t takDdc(ddcParameters*);
 #line 116 "./piruett.w"
 
 /*12:*/
-#line 252 "./piruett.w"
+#line 251 "./piruett.w"
 
 void(*handleIrq)(inputStruct*)= NULL;
 
@@ -139,7 +138,7 @@ int main(void)
 
 
 /*:2*//*13:*/
-#line 278 "./piruett.w"
+#line 277 "./piruett.w"
 
 
 
@@ -149,7 +148,7 @@ const int16_t minOut= INT16_MIN;
 const int16_t maxOut= INT16_MAX;
 
 /*:13*//*14:*/
-#line 291 "./piruett.w"
+#line 290 "./piruett.w"
 
 inputStruct*pInput_s= &(inputStruct){
 .edge= CH2RISE,
@@ -168,7 +167,7 @@ inputStruct*pInput_s= &(inputStruct){
 
 
 /*:14*//*15:*/
-#line 310 "./piruett.w"
+#line 309 "./piruett.w"
 
 transStruct*pTranslation_s= &(transStruct){
 .deadBand= 10
@@ -176,12 +175,12 @@ transStruct*pTranslation_s= &(transStruct){
 
 
 /*:15*//*16:*/
-#line 318 "./piruett.w"
+#line 317 "./piruett.w"
 
 cli();
 
 /*58:*/
-#line 983 "./piruett.w"
+#line 994 "./piruett.w"
 
 {
 
@@ -214,10 +213,10 @@ ADMUX&= ~(1<<REFS0);
 }
 
 /*:58*/
-#line 321 "./piruett.w"
+#line 320 "./piruett.w"
 
 /*60:*/
-#line 1038 "./piruett.w"
+#line 1049 "./piruett.w"
 
 {
 TCCR2B|= (1<<CS22)|(1<<CS21)|(1<<CS20);
@@ -228,10 +227,10 @@ TIMSK2|= (1<<OCIE2A);
 
 
 /*:60*/
-#line 322 "./piruett.w"
+#line 321 "./piruett.w"
 
 /*55:*/
-#line 956 "./piruett.w"
+#line 967 "./piruett.w"
 
 
 DDRB|= (1<<DDB5);
@@ -247,10 +246,10 @@ DDRD|= ((1<<DDD5)|(1<<DDD6));
 DDRD|= ((1<<DDD3)|(1<<DDD4));
 
 /*:55*/
-#line 323 "./piruett.w"
+#line 322 "./piruett.w"
 
 /*62:*/
-#line 1053 "./piruett.w"
+#line 1064 "./piruett.w"
 
 {
 
@@ -260,20 +259,20 @@ WDTCSR= (1<<WDIE)|(1<<WDP2)|(1<<WDP0);
 }
 
 /*:62*/
-#line 324 "./piruett.w"
+#line 323 "./piruett.w"
 
 
 /*:16*//*17:*/
-#line 329 "./piruett.w"
+#line 328 "./piruett.w"
 
 sei();
 
 
 /*:17*//*18:*/
-#line 337 "./piruett.w"
+#line 336 "./piruett.w"
 
 /*64:*/
-#line 1069 "./piruett.w"
+#line 1080 "./piruett.w"
 
 {
 
@@ -289,35 +288,35 @@ TCCR0B|= (1<<CS01);
 
 
 /*:64*/
-#line 338 "./piruett.w"
+#line 337 "./piruett.w"
 
 
 
 /*:18*//*19:*/
-#line 355 "./piruett.w"
+#line 354 "./piruett.w"
 
 
 /*56:*/
-#line 970 "./piruett.w"
+#line 981 "./piruett.w"
 
 {
 SMCR&= ~((1<<SM2)|(1<<SM1)|(1<<SM0));
 }
 
 /*:56*/
-#line 357 "./piruett.w"
+#line 356 "./piruett.w"
 
 
 
 ledCntl(OFF);
 
 /*:19*//*20:*/
-#line 366 "./piruett.w"
+#line 365 "./piruett.w"
 
 edgeSelect(pInput_s);
 
 /*:20*//*21:*/
-#line 373 "./piruett.w"
+#line 372 "./piruett.w"
 
 
 
@@ -325,13 +324,13 @@ for(;;)
 {
 
 /*:21*//*22:*/
-#line 385 "./piruett.w"
+#line 384 "./piruett.w"
 
 
 sleep_mode();
 
 /*:22*//*23:*/
-#line 398 "./piruett.w"
+#line 397 "./piruett.w"
 
 if(handleIrq!=NULL)
 {
@@ -340,7 +339,7 @@ handleIrq= NULL;
 }
 
 /*:23*//*24:*/
-#line 407 "./piruett.w"
+#line 406 "./piruett.w"
 
 
 {
@@ -375,7 +374,7 @@ else
 setPwm(pTranslation_s->larboardOut,pTranslation_s->starboardOut);
 
 /*:24*//*25:*/
-#line 442 "./piruett.w"
+#line 441 "./piruett.w"
 
 if(pTranslation_s->larboardOut||pTranslation_s->starboardOut)
 ledCntl(OFF);
@@ -393,7 +392,7 @@ return 0;
 
 
 /*:25*//*27:*/
-#line 464 "./piruett.w"
+#line 463 "./piruett.w"
 
 
 ISR(TIMER1_CAPT_vect)
@@ -402,7 +401,7 @@ handleIrq= &pwcCalc;
 }
 
 /*:27*//*28:*/
-#line 474 "./piruett.w"
+#line 473 "./piruett.w"
 
 
 ISR(TIMER2_COMPA_vect)
@@ -411,7 +410,7 @@ handleIrq= &diveTick;
 }
 
 /*:28*//*29:*/
-#line 484 "./piruett.w"
+#line 483 "./piruett.w"
 
 
 ISR(ADC_vect)
@@ -421,7 +420,7 @@ handleIrq= &pressureCalc;
 
 
 /*:29*//*30:*/
-#line 496 "./piruett.w"
+#line 495 "./piruett.w"
 
 ISR(WDT_vect)
 {
@@ -429,12 +428,12 @@ handleIrq= &lostSignal;
 }
 
 /*:30*//*31:*/
-#line 511 "./piruett.w"
+#line 510 "./piruett.w"
 
 void pwcCalc(inputStruct*pInput_s)
 {
 /*:31*//*32:*/
-#line 521 "./piruett.w"
+#line 520 "./piruett.w"
 
 
 
@@ -460,7 +459,7 @@ edgeSelect(pInput_s);
 }
 
 /*:32*//*33:*/
-#line 547 "./piruett.w"
+#line 546 "./piruett.w"
 
 void lostSignal(inputStruct*pInput_s)
 {
@@ -471,7 +470,7 @@ edgeSelect(pInput_s);
 }
 
 /*:33*//*34:*/
-#line 560 "./piruett.w"
+#line 559 "./piruett.w"
 
 void diveTick(inputStruct*pInput_s)
 {
@@ -500,7 +499,7 @@ wdt_reset();
 
 
 /*:34*//*35:*/
-#line 597 "./piruett.w"
+#line 596 "./piruett.w"
 
 void pressureCalc(inputStruct*pInput_s)
 {
@@ -522,7 +521,7 @@ pInput_s->pressure= (sum>>5);
 
 
 /*:35*//*36:*/
-#line 621 "./piruett.w"
+#line 620 "./piruett.w"
 
 void edgeSelect(inputStruct*pInput_s)
 {
@@ -542,7 +541,7 @@ ADMUX= (ADMUX&0xf0)|0U;
 TCCR1B&= ~(1<<ICES1);
 }
 /*:36*//*37:*/
-#line 642 "./piruett.w"
+#line 641 "./piruett.w"
 
 
 TIFR1|= (1<<ICF1);
@@ -550,7 +549,7 @@ TIFR1|= (1<<ICF1);
 
 
 /*:37*//*39:*/
-#line 654 "./piruett.w"
+#line 653 "./piruett.w"
 
 int16_t scaler(uint16_t input,
 uint16_t minIn,
@@ -559,7 +558,7 @@ int16_t minOut,
 int16_t maxOut)
 {
 /*:39*//*40:*/
-#line 664 "./piruett.w"
+#line 663 "./piruett.w"
 
 
 if(input> maxIn)
@@ -570,7 +569,7 @@ return minOut;
 
 
 /*:40*//*41:*/
-#line 683 "./piruett.w"
+#line 682 "./piruett.w"
 
 const int32_t ampFact= 128L;
 
@@ -583,7 +582,7 @@ return(ampFact*(int32_t)input/gain)-offset;
 }
 
 /*:41*//*42:*/
-#line 710 "./piruett.w"
+#line 709 "./piruett.w"
 
 
 void translate(transStruct*trans_s)
@@ -599,14 +598,14 @@ const int16_t ampFact= 128;
 
 
 /*:42*//*43:*/
-#line 729 "./piruett.w"
+#line 728 "./piruett.w"
 
 difference= (speed*((ampFact*trans_s->radius)/UINT8_MAX))/ampFact;
 rotation= (trans_s->track*((ampFact*difference)/UINT8_MAX))/ampFact;
 piruett= trans_s->radius;
 
 /*:43*//*44:*/
-#line 745 "./piruett.w"
+#line 744 "./piruett.w"
 
 if(trans_s->thrust!=STOPPED&&lock==OFF)
 {
@@ -619,7 +618,7 @@ lock= (abs(piruett)> pirLockLevel)?ON:OFF;
 
 trans_s->larboardOut= int16clamp(piruett,-max,max);
 /*:44*//*45:*/
-#line 758 "./piruett.w"
+#line 757 "./piruett.w"
 
 piruett= -piruett;
 trans_s->starboardOut= int16clamp(piruett,-max,max);
@@ -629,7 +628,7 @@ trans_s->starboardOut= int16clamp(piruett,-max,max);
 
 
 /*:45*//*46:*/
-#line 769 "./piruett.w"
+#line 768 "./piruett.w"
 
 void setPwm(int16_t larboardOut,int16_t starboardOut)
 {
@@ -657,7 +656,7 @@ OCR0B= abs(starboardOut);
 }
 
 /*:46*//*47:*/
-#line 797 "./piruett.w"
+#line 796 "./piruett.w"
 
 if(larboardOut||starboardOut)
 relayCntl(CLOSED);
@@ -667,7 +666,7 @@ relayCntl(OPEN);
 }
 
 /*:47*//*48:*/
-#line 807 "./piruett.w"
+#line 806 "./piruett.w"
 
 void ledCntl(int8_t state)
 {
@@ -675,7 +674,7 @@ PORTB= state?PORTB|(1<<PORTB5):PORTB&~(1<<PORTB5);
 }
 
 /*:48*//*49:*/
-#line 815 "./piruett.w"
+#line 814 "./piruett.w"
 
 void relayCntl(int8_t state)
 {
@@ -683,7 +682,7 @@ PORTB= state?PORTB|(1<<PORTB0):PORTB&~(1<<PORTB0);
 }
 
 /*:49*//*50:*/
-#line 823 "./piruett.w"
+#line 822 "./piruett.w"
 
 void larboardDirection(int8_t state)
 {
@@ -696,7 +695,7 @@ PORTD|= (1<<PORTD3);
 
 
 /*:50*//*51:*/
-#line 874 "./piruett.w"
+#line 883 "./piruett.w"
 
 
 int16_t takDdc(ddcParameters*pPar_s)
@@ -715,7 +714,9 @@ _Static_assert(sizeof(secDerCoef)/sizeof(secDerCoef[0])==PIDSAMPCT,
 uint8_t offset= pPar_s->pPvLast-pPar_s->pPvN;
 
 
-pPar_s->pPvLast= pPar_s->pPvN+(offset+1)%PIDSAMPCT;
+pPar_s->pPvLast= pPar_s->pPvN+(++offset)%PIDSAMPCT;
+
+
 
 
 
@@ -744,7 +745,7 @@ return pPar_s->m;
 }
 
 /*:51*//*52:*/
-#line 923 "./piruett.w"
+#line 934 "./piruett.w"
 
 void takDdcSetPid(ddcParameters*pPar_s,int16_t p,int16_t i,int16_t d,
 int16_t t)
@@ -760,7 +761,7 @@ pPar_s->pPvLast= pPar_s->pPvN;
 
 
 /*:52*//*53:*/
-#line 939 "./piruett.w"
+#line 950 "./piruett.w"
 
 void starboardDirection(int8_t state)
 {
@@ -771,7 +772,7 @@ PORTD|= (1<<PORTD4);
 }
 
 /*:53*//*54:*/
-#line 950 "./piruett.w"
+#line 961 "./piruett.w"
 
 int16_t int16clamp(int16_t value,int16_t min,int16_t max)
 {
