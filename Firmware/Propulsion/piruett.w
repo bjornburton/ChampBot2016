@@ -7,7 +7,8 @@
 \nocon % omit table of contents
 \datethis % print date on listing
 
-@* Introduction. This is the firmware portion of the propulsion system for our
+@** Introduction.
+This is the firmware portion of the propulsion system for our
 2016 Champbot.
 It features separate thrust and steering, including piruett turning. Also an
 autonomous dive function has been added.
@@ -49,7 +50,7 @@ The remaining, non-\.{PWM} pin, is held low.
 \.{OC0A} and \.{OC0B} is on pins 5 and 6  (\.{D8} and \.{D6}) and are the
 \.{PWM}. A fail-safe relay output will be at pin 8.
 
-@* Implementation.
+@** Implementation.
 The Futaba receiver has two \.{PWC} channels.
 The pulse-width from the receiver is at 20~ms intervals.
 The on-time ranges from 1000--2000~$\mu$s including trim.
@@ -119,7 +120,7 @@ older word ``larboard''.
 @ |F_CPU| is used to convey the Trinket Pro clock rate.
 @d F_CPU 16000000UL
 
-@ Here are some Boolean definitions that are used.
+@* Boolean definitions.
 @d ON 1
 @d OFF 0
 @d SET 1
@@ -134,7 +135,7 @@ older word ``larboard''.
 @d MANUAL 0
 @d STOPPED 0
 
-@ Here are some other definitions. It is critical that |MAX_DUTYCYCLE| is
+@* Other definitions. It is critical that |MAX_DUTYCYCLE| is
 98\% or less.
 @d CH2RISE 0   // rising edge of RC's remote channel 2
 @d CH2FALL 1   // falling edge of RC's remote channel 2
@@ -674,7 +675,8 @@ If it's not that simple, then compute the gain and offset and then continue in
 the usual way.
 This is not really an efficient method, recomputing gain and offset every time
 but we are not in a rush and it makes it easier since, if something changes,
-I don't have to manualy compute and enter these value.
+I don't have to manualy compute and enter these value. OK, maybe I could use
+the preprocessor.
 
 The constant |ampFact| amplifies values for math to take advantage of
 the high bits for precision.
@@ -830,12 +832,40 @@ void larboardDirection(int8_t state)
 @/}@/
 
 
+
+@
+Here is a simple procedure to set thrust direction on the starboard motor.
+@c
+void starboardDirection(int8_t state)
+@/{@/
+ if(state)
+    PORTD &= ~(1<<PORTD4);
+  else
+    PORTD |= (1<<PORTD4);
+@/}@/
+
+@
+A simple 16 bit clamp function.
+@c
+int16_t int16clamp(int16_t value, int16_t min, int16_t max)
+@/{@/
+ return (value > max)?max:(value < min)?min:value;
+@/}@/
+
 @
 This is the PID algorithm for the dive control.
 It is largely based on an algorithm from the book
 {\it Control and Dynamic Systems} by Yasundo Takahashi, et al.\ (1970).
 This is a nice, easy to compute iterative (velocity) algorithm.
-
+$$
+{\Delta}m_N=K_p(c_{N-1} - c_N)
++ K_i(r_N - c_N)
++ K_d(2c_{N-1} - c_{N-2} - c_N)
+$$
+where
+$$
+K_i = T/T_1 \hbox{,    } K_d = T_d / T \hbox{.}
+$$
 Everything is integrated so the proportional starts as a derivative and
 the derivative starts as a second derivative.
 It's a unique form, since error is seen only through the integral.
@@ -858,17 +888,20 @@ This function takes a structure pointer.
 That structure holds everything unique to the channel of control, including
 the process and output history.
 
-The variable |offset| is set and used to move |pPvLast| to the destination of
-the next process sample.
-This location is the present location of the oldest sample.
+The variable |offset| is computed from the distance between pointers.
+|offset|, with some modulus aritmatice, is used to move |pPvLast| to the
+destination of the next process sample.
+This new location is also the present location of the oldest sample so that
+will be the first sample used for the derivatives.
 In mode |MANUAL| it just returns from here, but in |AUTOMATIC| the output
 is updated.
 
-In updating the output, the derivitives are calculated,
-from the four last samples of the process variable, using the coefficients.
-This begins at the oldest sample, indicated by offest, and walks to the last.
+The derivitives are ithen calculated, from the four last samples of the
+process variable, using the coefficients.
+This begins at the oldest sample, indicated by offest, and walks to the latest.
 
 Next, the error between process and setpoint is computed.
+
 We then integrate the process variable's derivative, the error and the
 process variable's second derivative.
 That results in a correction based on the process's proportional, the error's
@@ -896,10 +929,8 @@ _Static_assert(sizeof(secDerCoef)/sizeof(secDerCoef[0]) == PIDSAMPCT,
               "PID sample mismatch");
 
 uint8_t offset = pPar_s->pPvLast - pPar_s->pPvN;
-                                // locate latest process variable
 
-pPar_s->pPvLast = pPar_s->pPvN + (++offset)%PIDSAMPCT;
-                                // update the location for the next sample 
+pPar_s->pPvLast = pPar_s->pPvN + (++offset%PIDSAMPCT);
 
 @/
 // at this point offset points at the oldest sample
@@ -910,8 +941,8 @@ pPar_s->pPvLast = pPar_s->pPvN + (++offset)%PIDSAMPCT;
 
     for(int8_t coIdx = 0;coIdx < PIDSAMPCT;coIdx++)
          {
-          dDer += derCoef[coIdx] * *(pPar_s->pPvN+offset%PIDSAMPCT);
-          dSecDer += secDerCoef[coIdx] * *(pPar_s->pPvN+offset%PIDSAMPCT);
+          dDer += derCoef[coIdx] * pPar_s->pPvN[offset%PIDSAMPCT];
+          dSecDer += secDerCoef[coIdx] * pPar_s->pPvN[offset%PIDSAMPCT];
           offset++;
          }
     dDer /= 6;
@@ -928,8 +959,8 @@ pPar_s->pPvLast = pPar_s->pPvN + (++offset)%PIDSAMPCT;
  return pPar_s->m;
 @/}@/
 
-@
- Takahashi Discrete Digital Control PID and Period initialization.
+@*  Control Initialization.
+ Takahashi Direct Digital Control PID and Period initialization.
  Call this once to set parameters, or when they are changed.
 @c
 void takDdcSetPid(ddcParameters* pPar_s, int16_t p, int16_t i, int16_t d,
@@ -942,26 +973,6 @@ void takDdcSetPid(ddcParameters* pPar_s, int16_t p, int16_t i, int16_t d,
 
  // set the process value pointer to the first position
  pPar_s->pPvLast = pPar_s->pPvN;
-@/}@/
-
-
-@
-Here is a simple procedure to set thrust direction on the starboard motor.
-@c
-void starboardDirection(int8_t state)
-@/{@/
- if(state)
-    PORTD &= ~(1<<PORTD4);
-  else
-    PORTD |= (1<<PORTD4);
-@/}@/
-
-@
-A simple 16 bit clamp function.
-@c
-int16_t int16clamp(int16_t value, int16_t min, int16_t max)
-@/{@/
- return (value > max)?max:(value < min)?min:value;
 @/}@/
 
 @ @<Initialize pin outputs...@>=
@@ -983,7 +994,7 @@ int16_t int16clamp(int16_t value, int16_t min, int16_t max)
   SMCR &= ~((1<<SM2) | (1<<SM1) | (1<<SM0));
 }
 
-@
+@* Configuration.
 This section configures the analog section for both analog and input capture
 through the \.{MUX}.
 Since the \.{MUX} is used \.{AIN1} and \.{AIN0} may still be used for digital

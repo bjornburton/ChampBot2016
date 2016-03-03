@@ -1,5 +1,5 @@
 # Project Name
-TARGET:= piruett
+TARGET:= ./piruett
 
 # Which target board
 # for Trinket use BOARD:=trinket
@@ -51,19 +51,20 @@ GRAPH    := $(TARGET).png
 # The usual make stuff
 default: $(HEX)
 elf:     $(ELF)
+graph:   $(GRAPH)
 all:     default
 
 $(GRAPH): $(DOTSRC)
 	$(DOT) $(DOTFLAGS) $(DOTSRC) > $(GRAPH)
 
-$(DOTSRC): 
+$(DOTSRC): $(EGYPTSRC)
 	$(EGYPT) $(EGYPTSRC) |\
         awk '{gsub(/__vector_21/,"ADC_vect");print}' |\
         awk '{gsub(/__vector_10/,"TIMER1_CAPT_vect");print}' |\
         awk '{gsub(/__vector_7/,"TIMER2_COMPA_vect");print}' |\
         awk '{gsub(/__vector_6/,"WDT_vect");print}' > $(DOTSRC)
 
-$(EGYPTSRC): $(OBJECTS)
+# $(EGYPTSRC): $(OBJECTS)
 
 $(CSOURCES): $(WEB) $(GRAPH)
 	$(TANGLE) $(WEB)
