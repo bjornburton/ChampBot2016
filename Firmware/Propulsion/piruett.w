@@ -8,16 +8,20 @@
 \datethis % print date on listing
 
 @** Introduction.
-This is the firmware portion of the propulsion system for our
+This is the firmware portion of the propulsion and dive system for our
 2016 Champbot.
-It features separate thrust and steering, including piruett turning. Also an
-autonomous dive function has been added.
+It features separate thrust and steering, including piruett turning. 
 
-This will facilitate motion by taking ``thrust'' and ``radius'' pulse-width,
+It facilitates lateral  motion by taking ``thrust'' and ``radius'' pulse-width,
 or \.{PWC}, inputs from the Futaba-Kyosho \.{RC} receiver and converting them
 to the appropriate motor actions.
 
-Also an autonomous dive function has been added.
+For 2016 an autonomous dive function has been added. As in 2015, dive is
+perfomed by full reverse thrust but, with this new feature, this thrust is
+modulated to maintain a specified depth, as determined by a pressure sensor in
+the electronics bay.
+By program, it will maintain this depth for 12 seconds,
+two seconds longer than requiered.
 
 Thrust is Channel 2, entering analog input A1, and Radius is channel 1, at A0.
 The action will be similar to driving an \.{RC} car or boat.
@@ -49,6 +53,10 @@ The remaining, non-\.{PWM} pin, is held low.
 
 \.{OC0A} and \.{OC0B} is on pins 5 and 6  (\.{D8} and \.{D6}) and are the
 \.{PWM}. A fail-safe relay output will be at pin 8.
+
+
+
+
 
 @** Implementation.
 The Futaba receiver has two \.{PWC} channels.
@@ -369,7 +377,7 @@ edgeSelect(pInput_s);
 @
 This is the loop that does the work.
 It should spend most of its time in ``sleep\_mode'', comming out at each
-interrupt event caused by an edge or watchdog timeout.
+interrupt event caused by an edge, tick or watchdog timeout.
 @c
 
 
@@ -377,10 +385,10 @@ interrupt event caused by an edge or watchdog timeout.
   {@/
 
 @
-Now that a loop is started, the \.{PWM} is value and we wait in
+Now that a loop is started, the drive \.{PWM} has its values and we wait in
 |idle| for the edge on the channel selected.
 Each sucessive loop will finish in the same way.
-After three passes |translation_s| will have good values.
+After three passes |translation_s| will have good values to work with.
 
 @c
 
@@ -616,7 +624,7 @@ void pressureCalc(inputStruct *pInput_s)
 
 @
 The procedure edgeSelect configures the ``Input Capture'' unit to capture on
-the expected edge type.
+the expected edge type from the remote control's proportional signal.
 
 @c
 void edgeSelect(inputStruct *pInput_s)
@@ -650,7 +658,8 @@ It seems odd but clearing it involves writing a one to it.
 @
 The scaler function takes an input, in time, from the Input Capture
 Register and returns a value scaled by the parameters in structure
-|inputScale_s|.
+|inputScale_s|. This is used to translate the stick position of the remote into
+terms that we can use.
 @c
 int16_t scaler(uint16_t input,
                uint16_t minIn,
@@ -676,7 +685,7 @@ the usual way.
 This is not really an efficient method, recomputing gain and offset every time
 but we are not in a rush and it makes it easier since, if something changes,
 I don't have to manualy compute and enter these value. OK, maybe I could use
-the preprocessor.
+the preprocessor but compiler optimization probably makes this pretty good.
 
 The constant |ampFact| amplifies values for math to take advantage of
 the high bits for precision.
@@ -702,7 +711,6 @@ should not be too disruptive.
 The sign of |larboardOut| and |starboardOut| indicates direction.
 As before, the constant |ampFact| amplifies values for math so to take
 advantage of the high bits for precision.
- bits.
 
 This procedure is intended for values from -255 to 255 or |INT16_MIN| to
 |INT16_MAX|.
@@ -726,6 +734,7 @@ const int16_t ampFact = 128;
 Here we convert desired radius to thrust-difference by scaling to speed.
 Then that difference is converted to rotation by scaling it with |track|.
 The radius sensitivity is adjusted by changing the value of |track|.
+From testing it seems like this track value is fine.
 
 @c
  difference = (speed * ((ampFact * trans_s->radius)/UINT8_MAX))/ampFact;
@@ -812,7 +821,7 @@ void ledCntl(int8_t state)
 @/}@/
 
 @
-Here is a simple procedure to flip the Relay Closed or Open from pin \#8.
+Here is a simple procedure to flip the Relay Closed or Open from pin D8.
 @c
 void relayCntl(int8_t state)
 @/{@/
@@ -1039,10 +1048,11 @@ last timer.
 It only has an 8 bit prescaler so it will be too fast and will need to be
 divided---a lot.
 The prescaler is set to it's maximum of 1024.
-The timer is set to \.{CTC} mode so that the time loop is trimable.
+The timer is set to \.{CTC} mode so that the time loop is trimmable.
 That will be pretty fast so we need more division in software.
 We want to divide by a power of two so we can use a simple compare, and no
-resets. A divisor of 256 looks perfect since it is a small as we can go and
+counter resets.
+A divisor of 256 looks perfect since it is a small as we can go and
 still fit the ticks in the small 8 bit timer.
 The time is trimmed to make 256 passes close to 0.25 seconds by loading compare
 register, \.{OCR2A}, with 243. The interval, with the software
