@@ -898,9 +898,9 @@ That structure holds everything unique to the channel of control, including
 the process and output history.
 
 The variable |offset| is computed from the distance between pointers.
-|offset|, with some modulus aritmatice, is used to move |pPvLast| to the
+|offset|, with some modulus arithmatic, is used to move |pPvLast| to the
 destination of the next process sample.
-This new location is also the present location of the oldest sample so that
+This new location is also the present location of the oldest sample---that
 will be the first sample used for the derivatives.
 In mode |MANUAL| it just returns from here, but in |AUTOMATIC| the output
 is updated.
@@ -1006,10 +1006,9 @@ void takDdcSetPid(ddcParameters* pPar_s, int16_t p, int16_t i, int16_t d,
 @* Configuration.
 This section configures the analog section for both analog and input capture
 through the \.{MUX}.
-Since the \.{MUX} is used \.{AIN1} and \.{AIN0} may still be used for digital
+Since the \.{MUX} is used, \.{AIN1} and \.{AIN0} may still be used for digital
 data.
-Default is \.{ICR} on channel 0 but by setting the MUX to channel 2 and
-clearing \.{ADEN}, an ADC conversion will occour on the next idle.
+Default is \.{ICR} (Input Capture) on channel 0 but by setting the MUX to channel 2 and clearing \.{ADEN}, an ADC conversion will occur on the next idle.
 Conversion will take about 191~$\mu$s and will complete with an interrupt.
 @ @<Initialize the inputs and capture mode...@>=
 {
@@ -1052,7 +1051,7 @@ The timer is set to \.{CTC} mode so that the time loop is trimmable.
 That will be pretty fast so we need more division in software.
 We want to divide by a power of two so we can use a simple compare, and no
 counter resets.
-A divisor of 256 looks perfect since it is a small as we can go and
+A divisor of 256 looks perfect, since it is as small as we can go and
 still fit the ticks in the small 8 bit timer.
 The time is trimmed to make 256 passes close to 0.25 seconds by loading compare
 register, \.{OCR2A}, with 243. The interval, with the software
@@ -1098,6 +1097,7 @@ the datasheet, is preferred for motor control.
 The prescaler is set to clk/8 and with a 16 MHz clock the $f$ is about 3922~Hz.
 We are using |Set| on comparator match to invert the \.{PWM}, suiting the
 glue-logic  which drives the H-Bridge.
+
 @ @<Initialize the Timer Counter 0 for PWM...@>=
 {
  // 15.9.1 TCCR0A – Timer/Counter Control Register A
