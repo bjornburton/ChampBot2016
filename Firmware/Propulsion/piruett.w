@@ -173,7 +173,7 @@ This structure is for the PID or Direct Digital Control.
 The larger it is, the bigger will be the effect of PID.
 |k_i| is the integral coefficient in resets per unit-time.
 |k_d| is the derivative coefficient.
-|m| is the output. Whatever is minimal energy is probably a good
+|m| is the output. Whatever is minimal power is probably a good
 output to start with.
 |min| is the minimum allowed output.
 |max| is the maximum allowed output.
@@ -228,8 +228,8 @@ typedef struct {
 
 @<Types...@>=
 typedef struct {
-    uint16_t diveTime; // 0.25 sec intervals allowed before it gets canceled
-    uint16_t submergeTime; // 0.25 sec intervals to remain at depth
+    uint16_t diveTime; // 0.25 sec intervals remaining before it gets canceled
+    uint16_t submergeTime; // 0.25 sec intervals remainng at depth
     int16_t starboardOut;   // -255 to 255
     int16_t larboardOut;    // -255 to 255
     } diveStruct;
