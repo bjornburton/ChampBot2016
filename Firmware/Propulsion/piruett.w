@@ -16,7 +16,8 @@ It facilitates lateral  motion by taking ``thrust'' and ``radius'' pulse-width,
 or \.{PWC}, inputs from the Futaba-Kyosho \.{RC} receiver and converting them
 to the appropriate motor actions.
 
-Thrust is receiver-channel 2, entering analog input ADC1(PC1), and Radius is channel 1, at ADC0(PC0).
+Thrust is receiver-channel 2, entering analog input ADC1 \.{(PC1)}, and Radius
+is channel 1, at ADC0 \.{(PC0)}.
 The action will be similar to driving an \.{RC} car or boat.
 By keeping it natural, it should be easier to navigate the course than with a
 skid-steer style control.
@@ -49,14 +50,14 @@ The remaining, non-\.{PWM} pin, is held low.
 
 
 For 2016 an autonomous dive function has been added. As in 2015, dive is
-perfomed by full reverse thrust but, with this new feature, this thrust is
+performed by full reverse thrust but, with this new feature, this thrust is
 modulated to maintain a specified depth, as determined by a pressure sensor in
 the electronics bay.
 The sensor signal connects to ADC2 (\.{PC2}) through a voltage divider.
 The divider scales the 5 volt range of the sensor to the 1.1 volt range of the
 ADC.
 By program, it will maintain this depth for 12 seconds,
-two seconds longer than requiered.
+two seconds longer than required.
 
 
 
