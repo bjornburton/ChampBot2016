@@ -26,7 +26,7 @@ EGYPT     := egypt
 TANGLE    := ctangle
 WEAVE     := ~/avrfun/cweb/cweave
 TEX       := pdftex
-CFLAGS    :=  -std=c11 -D_C11_SOURCE -g -mmcu=$(MCU) -Wall -Os -pedantic -fdump-rtl-expand
+CFLAGS    :=  -std=c11 -D_C11_SOURCE -g -mmcu=$(MCU) -Wall -O0 -ggdb -pedantic -fdump-rtl-expand
 AFLAGS    :=  -S
 CONV      :=avr-objcopy
 CONVFLAGS := -j .text -j .data -O ihex
@@ -64,7 +64,7 @@ $(DOTSRC): $(EGYPTSRC)
         awk '{gsub(/__vector_7/,"TIMER2_COMPA_vect");print}' |\
         awk '{gsub(/__vector_6/,"WDT_vect");print}' > $(DOTSRC)
 
-# $(EGYPTSRC): $(OBJECTS)
+$(EGYPTSRC): $(OBJECTS)
 
 $(CSOURCES): $(WEB) $(GRAPH)
 	$(TANGLE) $(WEB)

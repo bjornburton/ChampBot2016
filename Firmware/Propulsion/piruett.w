@@ -16,14 +16,7 @@ It facilitates lateral  motion by taking ``thrust'' and ``radius'' pulse-width,
 or \.{PWC}, inputs from the Futaba-Kyosho \.{RC} receiver and converting them
 to the appropriate motor actions.
 
-For 2016 an autonomous dive function has been added. As in 2015, dive is
-perfomed by full reverse thrust but, with this new feature, this thrust is
-modulated to maintain a specified depth, as determined by a pressure sensor in
-the electronics bay.
-By program, it will maintain this depth for 12 seconds,
-two seconds longer than requiered.
-
-Thrust is Channel 2, entering analog input A1, and Radius is channel 1, at A0.
+Thrust is receiver-channel 2, entering analog input ADC1(PC1), and Radius is channel 1, at ADC0(PC0).
 The action will be similar to driving an \.{RC} car or boat.
 By keeping it natural, it should be easier to navigate the course than with a
 skid-steer style control.
@@ -51,9 +44,19 @@ direction.
 The remaining, non-\.{PWM} pin, is held low.
 
 
-\.{OC0A} and \.{OC0B} is on pins 5 and 6  (\.{D8} and \.{D6}) and are the
-\.{PWM}. A fail-safe relay output will be at pin 8.
+\.{OC0A} and \.{OC0B} is on pins 5 and 6  (\.{PD8} and \.{PD6}) and are the
+\.{PWM}. A fail-safe relay output will be at pin 8 (\.{PB0}).
 
+
+For 2016 an autonomous dive function has been added. As in 2015, dive is
+perfomed by full reverse thrust but, with this new feature, this thrust is
+modulated to maintain a specified depth, as determined by a pressure sensor in
+the electronics bay.
+The sensor signal connects to ADC2 (\.{PC2}) through a voltage divider.
+The divider scales the 5 volt range of the sensor to the 1.1 volt range of the
+ADC.
+By program, it will maintain this depth for 12 seconds,
+two seconds longer than requiered.
 
 
 
@@ -1007,8 +1010,9 @@ void takDdcSetPid(ddcParameters* pPar_s, int16_t p, int16_t i, int16_t d,
 This section configures the analog section for both analog and input capture
 through the \.{MUX}.
 Since the \.{MUX} is used, \.{AIN1} and \.{AIN0} may still be used for digital
-data.
-Default is \.{ICR} (Input Capture) on channel 0 but by setting the MUX to channel 2 and clearing \.{ADEN}, an ADC conversion will occur on the next idle.
+data comming from the receiver.
+Default is \.{ICR} on channel 0 but by setting the MUX to channel \.{ADC2} and
+clearing \.{ADEN}, an ADC conversion will occur on the next idle.
 Conversion will take about 191~$\mu$s and will complete with an interrupt.
 @ @<Initialize the inputs and capture mode...@>=
 {
