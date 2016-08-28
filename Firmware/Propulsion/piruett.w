@@ -229,7 +229,7 @@ typedef struct {
 @<Types...@>=
 typedef struct {
     uint16_t diveTime; // 0.25 sec intervals remaining before it gets canceled
-    uint16_t submergeTime; // 0.25 sec intervals remainng at depth
+    uint16_t submergeTime; // 0.25 sec intervals remaining at depth
     int16_t starboardOut;   // -255 to 255
     int16_t larboardOut;    // -255 to 255
     } diveStruct;
