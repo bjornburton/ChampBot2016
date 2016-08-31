@@ -1,5 +1,5 @@
 # Project Name
-TARGET:= ./piruett
+TARGET:= piruett
 
 # Which target board
 # for Trinket use BOARD:=trinket
@@ -24,10 +24,9 @@ CC        := avr-gcc
 DOT       := dot 
 EGYPT     := egypt 
 TANGLE    := ctangle
-WEAVE     := ~/avrfun/cweb/cweave
+WEAVE     := cweave
 TEX       := pdftex
-CFLAGS    :=  -std=c11 -D_C11_SOURCE -g -mmcu=$(MCU) -Wall -O0 -ggdb -pedantic -fdump-rtl-expand
-AFLAGS    :=  -S
+CFLAGS    :=  -std=c11 -g -mmcu=$(MCU) -Wall -Os -pedantic -fdump-rtl-expand
 CONV      :=avr-objcopy
 CONVFLAGS := -j .text -j .data -O ihex
 LIBS      :=
@@ -45,13 +44,13 @@ WEB      := $(TARGET).w
 DOC      := $(TARGET).pdf
 TEXSRC   := $(TARGET).tex
 DOTSRC   := $(TARGET).dot
-EGYPTSRC := $(TARGET).c.192r.expand
+EGYPTSRC := $(TARGET).c.*r.expand
 GRAPH    := $(TARGET).png
+
 
 # The usual make stuff
 default: $(HEX)
 elf:     $(ELF)
-graph:   $(GRAPH)
 all:     default
 
 $(GRAPH): $(DOTSRC)
@@ -61,7 +60,6 @@ $(DOTSRC): $(EGYPTSRC)
 	$(EGYPT) $(EGYPTSRC) |\
         awk '{gsub(/__vector_21/,"ADC_vect");print}' |\
         awk '{gsub(/__vector_10/,"TIMER1_CAPT_vect");print}' |\
-        awk '{gsub(/__vector_7/,"TIMER2_COMPA_vect");print}' |\
         awk '{gsub(/__vector_6/,"WDT_vect");print}' > $(DOTSRC)
 
 $(EGYPTSRC): $(OBJECTS)
@@ -88,11 +86,6 @@ clean:
 	-rm -f $(CSOURCES)
 	-rm -f $(DOTSRC)
 	-rm -f $(EGYPTSRC)
-	-rm -f $(TARGET).s
-	-rm -f $(TARGET).scn
-	-rm -f $(TARGET).idx
-	-rm -f $(TARGET).toc
-
 	
 install:
 	$(PROGSW) $(PROGSWFLAGS) -c usbtiny -U flash:w:$(HEX)
@@ -100,11 +93,15 @@ install:
 installasp:
 	$(PROGSW) $(PROGSWFLAGS) -c usbasp -U flash:w:$(HEX)
 
+installavr:
+	$(PROGSW) $(PROGSWFLAGS) -c avrispmkII -U flash:w:$(HEX)
+
+
+
+
 size:
 	avr-size --format=avr --mcu=$(MCU) $(ELF)
 
 fuse:
 	$(PROGSW) $(PROGSWFLAGS) -u -U $(LFUSE)  -U $(HFUSE) -U $(EFUSE)
  
-assy:
-	$(CC) -c $(CFLAGS) $(AFLAGS) $(CSOURCES)
