@@ -58,6 +58,7 @@ $(GRAPH): $(DOTSRC)
 
 $(DOTSRC): $(EGYPTSRC)
 	$(EGYPT) $(EGYPTSRC) |\
+        awk '{gsub(/__vector_21/,"ADC_vect");print}' |\
         awk '{gsub(/__vector_10/,"TIMER1_CAPT_vect");print}' |\
         awk '{gsub(/__vector_6/,"WDT_vect");print}' > $(DOTSRC)
 
@@ -91,6 +92,12 @@ install:
 
 installasp:
 	$(PROGSW) $(PROGSWFLAGS) -c usbasp -U flash:w:$(HEX)
+
+installavr:
+	$(PROGSW) $(PROGSWFLAGS) -c avrispmkII -U flash:w:$(HEX)
+
+
+
 
 size:
 	avr-size --format=avr --mcu=$(MCU) $(ELF)
