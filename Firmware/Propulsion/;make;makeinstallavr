@@ -218,7 +218,7 @@ typedef struct {
 typedef struct {
     int16_t thrust;         // -255 to 255
     int16_t radius;         // -255 to 255
-    const int16_t track;    //    1 to 255
+    int16_t track;          //    1 to 255
     int16_t starboardOut;   // -255 to 255
     int16_t larboardOut;    // -255 to 255
     const int8_t  deadBand; // width of zero in terms of output units
@@ -299,7 +299,7 @@ const int16_t maxOut = INT16_MAX;  // maximum value of thrust
 Initially we will have the motors off and wait for the first rising edge
 from the remote. The PID parameters are instantiated and loaded with safe
 defaults. |takDdcSetPid()| is used to set the
-parameters.
+parameters. 
 @c
 inputStruct* pInput_s = &(inputStruct){@/
     @[@].edge = CH2RISE,@/
@@ -321,8 +321,7 @@ inputStruct* pInput_s = &(inputStruct){@/
 This is the structure that holds output parameters.
 @c
 transStruct* pTranslation_s = &(transStruct){
-    @[@].deadBand = 10,
-    @[@].track = 100 /* represents unit-less prop-to-prop distance */
+    @[@].deadBand = 10
     };
 
 
@@ -370,9 +369,7 @@ This stumped me for a good while.
 @<Configure to idle on sleep...@>
 @/
 
-#if 1
 ledCntl(OFF);
-#endif
 
 @
 Since |edge| is already set, calling |edgeSelect()| will get it ready for
@@ -398,15 +395,8 @@ Each sucessive loop will finish in the same way.
 After three passes |translation_s| will have good values to work with.
 
 @c
-  // if we are here, all is well.
-  wdt_reset();
- 
-  // reset WDT back to interrupt mode, after automatically being set to POR.
-  //(see doc AVR132)
- WDTCSR |= (1<<WDIE);
+
  sleep_mode();
-
-
 
 @
 If execution arrives here, some interrupt has woken it from sleep and some
@@ -449,26 +439,24 @@ Here we scale the \.{PWC} durations and apply the ``deadBand''.
  pTranslation_s->radius = outputCh1;
  pTranslation_s->thrust = outputCh2;
 
+ pTranslation_s->track = 100; /* represents unit-less prop-to-prop distance */
  }
 
 translate(pTranslation_s);
 
 if (pInput_s->controlMode == REMOTE )
-  setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
+   setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
  else
    setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
 
 @
 The LED is used to indicate when both channels PWM's are zeros.
-
-@c
-pTranslation_s->larboardOut=0;
-
-
+//@c
 if(pTranslation_s->larboardOut || pTranslation_s->starboardOut)
-    ledCntl(ON);
+    ledCntl(OFF);
  else
-    ledCntl(ON);
+    ledCntl(OFF);
+@c
 
 
 
@@ -499,23 +487,22 @@ ISR (TIMER1_CAPT_vect)
 Here is the \.{ISR} that fires at at about 64 Hz for the main dive tick.
 This is used for the dive-control loop.
 @c
-#if 0
+
 ISR (TIMER2_COMPA_vect)
 @/{@/
  handleIrq = &diveTick;
 @/}@/
-#endif
+
 @
 Here is the \.{ISR} that fires after a successful \.{ADC} conversion.
 The \.{ADC} is used to determine depth from pressure.
 @c
 
-#if 0
 ISR (ADC_vect)
 @/{@/
  handleIrq = &pressureCalc;
 @/}@/
-#endif
+
 
 @
 When the watchdog timer expires, this vector is called.
@@ -544,8 +531,8 @@ On the falling edges we can compute the durations using modulus subtraction
 and then set the edge index for the next edge.
 Channel 2 leads so that rise is first.
 
-Arrival at the last case establishes that there was a signal and sets mode 
-to REMOTE. 
+Arrival at the last case establishes that there was a signal, clears
+the flag.
 @c
 
 
@@ -572,19 +559,13 @@ edgeSelect(pInput_s);
 
 @
 This procedure sets output to zero in the event of a lost signal.
-Note that \.{WDIE} is reset to 1 so that it remains in interrupt-only mode.
 @c
 void lostSignal(inputStruct *pInput_s)
 @/{@/
-
  pInput_s->controlMode = OFF;
  pInput_s->edge = CH2RISE;
 
  edgeSelect(pInput_s);
-#if 0
- ledCntl(OFF);
-#endif
-
 @/}@/
 
 @
@@ -612,6 +593,7 @@ if (!(++tickCount)) // every 256 ticks
          takDdc(pInput_s->pPid_s);
          }
 
+     wdt_reset(); /* watchdog timer is reset */
     }
 
 @/}@/
@@ -867,7 +849,6 @@ void larboardDirection(int8_t state)
 
 
 
-
 @
 Here is a simple procedure to set thrust direction on the starboard motor.
 @c
@@ -1104,21 +1085,16 @@ TIMSK2 |= (1<<OCIE2A); // Interrupt on a compare match
 
 @
 See section 11.8 in the datasheet for details on the Watchdog Timer.
-This is in the ``Interrupt Mode'' through \.{WDIE}.
-When controlled remotly or in an autonomous dive this should not time-out.
+This is in the ``Interrupt Mode''.
+When controlled remotlely or in an autonomous dive this should not time-out.
 It needs to be long enough to allow for the 0.25 ms autonomous dive loop.
 
 @ @<Initialize watchdog timer...@>=
 {
- wdt_reset();
- WDTCSR &= ~(1<<WDRF);
- WDTCSR |= (1<<WDCE) | (1<<WDE);
- WDTCSR = (1<<WDE) | (1<<WDP2) | (1<<WDP0);
- WDTCSR |= (1<<WDIE);
-                             // reset after about 0.5 seconds (see 11.9.2)
 
- WDTCSR |= (1<<WDCE);
- WDTCSR &= ~(1<<WDE);
+ WDTCSR |= (1<<WDCE) | (1<<WDE);
+ WDTCSR = (1<<WDIE) | (1<<WDP2) | (1<<WDP0);
+                             // reset after about 0.5 seconds (see 11.9.2)
 }
 
 @
