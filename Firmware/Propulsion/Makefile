@@ -26,7 +26,8 @@ EGYPT     := egypt
 TANGLE    := ctangle
 WEAVE     := cweave
 TEX       := pdftex
-CFLAGS    :=  -std=c11 -g -mmcu=$(MCU) -Wall -Os -pedantic -fdump-rtl-expand
+# Must optimize at 0, 1 or g. 2 and s will fail
+CFLAGS    :=  -std=c11 -g -mmcu=$(MCU) -Wall -O1 -pedantic -fdump-rtl-expand
 CONV      :=avr-objcopy
 CONVFLAGS := -j .text -j .data -O ihex
 LIBS      :=

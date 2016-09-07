@@ -159,6 +159,15 @@ older word ``larboard''.
 @d SUBMERGED 3 // the mode of being submerged
 @d PIDSAMPCT 4 // the PID sample count for derivatives
 
+
+@* Interrupt Controls.
+@d WATCHDOG ON // reset and all
+@d ANALOG OFF
+@d TICK OFF // TIMER2
+@d CAPTURE OFF //TIMER1
+
+
+
 @ @<Include...@>=
 # include <avr/io.h> // need some port access
 # include <avr/interrupt.h> // have need of an interrupt
@@ -266,6 +275,7 @@ void @[@] (*handleIrq)(inputStruct *) = NULL;
 
 @/
 
+
 int main(void)
 @/{@/
 
@@ -331,10 +341,10 @@ Here the interrupts are disabled so that configuring them doesn't set it off.
 @c
  cli();
 @/
-@<Initialize the inputs and capture mode...@>
-@<Initialize tick timer...@>
-@<Initialize pin outputs...@>
 @<Initialize watchdog timer...@>
+@<Initialize the inputs and capture mode...@>
+@<Initialize pin outputs...@>
+@<Initialize tick timer...@>
 @/
 @
 Any interrupt function requires that bit ``Global Interrupt Enable''
@@ -400,13 +410,18 @@ After three passes |translation_s| will have good values to work with.
 @c
   // if we are here, all is well.
   wdt_reset();
- 
-  // reset WDT back to interrupt mode, after automatically being set to POR.
+
+for(uint16_t ct=1;ct<20000;ct++);
+  // Reset WDT back to interrupt mode.
+  // Needed for combo interrupt and reset.
   //(see doc AVR132)
- WDTCSR |= (1<<WDIE);
+ # if WATCHDOG
+   WDTCSR |= (1<<WDIE);
+ # else
+   WDTCSR &= ~(1<<WDIE);
+ # endif
+
  sleep_mode();
-
-
 
 @
 If execution arrives here, some interrupt has woken it from sleep and some
@@ -418,12 +433,15 @@ wake-up for some other reason.
 
 
 @c
+
+for(uint16_t ct=1;ct<20000;ct++);
 if (handleIrq != NULL)
    {@/
     handleIrq(pInput_s);
     handleIrq = NULL;
     }
 
+for(uint16_t ct=1;ct<30000;ct++);
 @
 Here we scale the \.{PWC} durations and apply the ``deadBand''.
 @c
@@ -466,9 +484,9 @@ pTranslation_s->larboardOut=0;
 
 
 if(pTranslation_s->larboardOut || pTranslation_s->starboardOut)
-    ledCntl(ON);
+    ledCntl(OFF);
  else
-    ledCntl(ON);
+    ledCntl(OFF);
 
 
 
@@ -499,29 +517,27 @@ ISR (TIMER1_CAPT_vect)
 Here is the \.{ISR} that fires at at about 64 Hz for the main dive tick.
 This is used for the dive-control loop.
 @c
-#if 0
 ISR (TIMER2_COMPA_vect)
 @/{@/
  handleIrq = &diveTick;
 @/}@/
-#endif
+
 @
 Here is the \.{ISR} that fires after a successful \.{ADC} conversion.
 The \.{ADC} is used to determine depth from pressure.
 @c
 
-#if 0
 ISR (ADC_vect)
 @/{@/
  handleIrq = &pressureCalc;
 @/}@/
-#endif
 
 @
 When the watchdog timer expires, this vector is called.
 This is what happens if the remote's transmitter signal is not received.
 It calls a variant of |pwcCalc| that only sets the controlMode to OFF.
 @c
+
 ISR (WDT_vect)
 @/{@/
  handleIrq = &lostSignal;
@@ -581,9 +597,7 @@ void lostSignal(inputStruct *pInput_s)
  pInput_s->edge = CH2RISE;
 
  edgeSelect(pInput_s);
-#if 0
  ledCntl(OFF);
-#endif
 
 @/}@/
 
@@ -990,7 +1004,7 @@ pPar_s->pPvLast = pPar_s->pPvN + (++offset%PIDSAMPCT);
     pPar_s->m = int16clamp(pPar_s->m, pPar_s->mMin, pPar_s->mMax);
    }
 
- 
+
  return pPar_s->m;
 @/}@/
 
@@ -1042,7 +1056,10 @@ Conversion will take about 191~$\mu$s and will complete with an interrupt.
  // ADCSRA – ADC Control and Status Register A
  ADCSRA &= ~(1<<ADEN); // Conn the MUX to (-) input of comparator (sec 23.2)
  ADCSRA &= ~((1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)); // prescaler to 128
- ADCSRA &= ~(1<<ADIE); // ADC to interrupt on completion
+
+ # if ANALOG
+   ADCSRA &= ~(1<<ADIE); // ADC to interrupt on completion
+ # endif
 
  // 23.3.1 ADCSRB – ADC Control and Status Register B
  ADCSRB |= (1<<ACME);  // Conn the MUX to (-) input of comparator (sec 23.2)
@@ -1056,7 +1073,9 @@ Conversion will take about 191~$\mu$s and will complete with an interrupt.
  ACSR   |= (1<<ACIS1); // Set for both rising and falling edge (sec 23.3.2)
 
  // 16.11.8 TIMSK1 – Timer/Counter1 Interrupt Mask Register
- TIMSK1 |= (1<<ICIE1); // Enable input capture interrupt (sec 16.11.8)
+ # if CAPTURE
+   TIMSK1 |= (1<<ICIE1); // Enable input capture interrupt (sec 16.11.8)
+ # endif
 
  // 16.11.2 TCCR1B – Timer/Counter1 Control Register B
  TCCR1B |= (1<<ICNC1); // Enable input capture noise canceling (sec 16.11.2)
@@ -1098,7 +1117,9 @@ The test could look a bit like |"!(++tickCount \& ~|divisor|U)"| except at
 TCCR2B |= (1<<CS22) | (1<<CS21) | (1<<CS20); // maximum prescale (see 18.11.2)
 TCCR2A |= (1<<WGM21); // CTC mode (see 18.11.1)
 OCR2A = 243U; // Do I need to make this clearer?
-TIMSK2 |= (1<<OCIE2A); // Interrupt on a compare match
+# if TICK
+ TIMSK2 |= (1<<OCIE2A); // Interrupt on a compare match
+# endif
 }
 
 
@@ -1111,14 +1132,11 @@ It needs to be long enough to allow for the 0.25 ms autonomous dive loop.
 @ @<Initialize watchdog timer...@>=
 {
  wdt_reset();
- WDTCSR &= ~(1<<WDRF);
- WDTCSR |= (1<<WDCE) | (1<<WDE);
- WDTCSR = (1<<WDE) | (1<<WDP2) | (1<<WDP0);
- WDTCSR |= (1<<WDIE);
+ MCUSR &= ~(1<<WDRF);
+ WDTCSR |= (1<<WDCE) | (1<<WDE); // this unlocks it
+ WDTCSR = (1<<WDE)|(1<<WDP2) | (1<<WDP0);
+ WDTCSR |= (1<<WDIE); // set interrupt on
                              // reset after about 0.5 seconds (see 11.9.2)
-
- WDTCSR |= (1<<WDCE);
- WDTCSR &= ~(1<<WDE);
 }
 
 @
