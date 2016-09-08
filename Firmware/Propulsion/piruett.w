@@ -162,9 +162,9 @@ older word ``larboard''.
 
 @* Interrupt Controls.
 @d WATCHDOG ON // reset and all
-@d ANALOG OFF
-@d TICK OFF // TIMER2
-@d CAPTURE OFF //TIMER1
+@d ANALOG ON
+@d TICK ON // TIMER2
+@d CAPTURE ON //TIMER1
 
 
 
@@ -256,6 +256,7 @@ void edgeSelect(inputStruct *);
 void translate(transStruct *);
 void setPwm(int16_t, int16_t);
 void lostSignal(inputStruct *);
+void feedDog(void);
 int16_t scaler(uint16_t input, uint16_t minIn,  uint16_t maxIn,
                                int16_t  minOut, int16_t  maxOut);
 int16_t int16clamp(int16_t value, int16_t min, int16_t max);
@@ -300,10 +301,10 @@ Until we have collected the edges we will assume there is no signal.
 @c
 
 
-const uint16_t minIn = 14970; // minimum normal value from receiver
-const uint16_t maxIn = 27530; // maximum normal value from receiver
-const int16_t minOut = INT16_MIN;  // minimum value of thrust
-const int16_t maxOut = INT16_MAX;  // maximum value of thrust
+const uint16_t minIn = 14970U; // minimum normal value from receiver
+const uint16_t maxIn = 27530U; // maximum normal value from receiver
+const int16_t minOut = INT8_MIN;  // minimum value of thrust
+const int16_t maxOut = INT8_MAX;  // maximum value of thrust
 
 @
 Initially we will have the motors off and wait for the first rising edge
@@ -380,9 +381,6 @@ This stumped me for a good while.
 @<Configure to idle on sleep...@>
 @/
 
-#if 1
-ledCntl(OFF);
-#endif
 
 @
 Since |edge| is already set, calling |edgeSelect()| will get it ready for
@@ -397,7 +395,6 @@ It should spend most of its time in ``sleep\_mode'', comming out at each
 interrupt event caused by an edge, tick or watchdog timeout.
 @c
 
-
  for (;;)
   {@/
 
@@ -409,18 +406,7 @@ After three passes |translation_s| will have good values to work with.
 
 @c
   // if we are here, all is well.
-  wdt_reset();
-
-for(uint16_t ct=1;ct<20000;ct++);
-  // Reset WDT back to interrupt mode.
-  // Needed for combo interrupt and reset.
-  //(see doc AVR132)
- # if WATCHDOG
-   WDTCSR |= (1<<WDIE);
- # else
-   WDTCSR &= ~(1<<WDIE);
- # endif
-
+ feedDog();
  sleep_mode();
 
 @
@@ -430,21 +416,18 @@ The pointer |handleIrq| will be assigned the value of the responsible
 function and then executed.
 After that the \.{IRQ} is nulled so as to avoid repeating the action, should it
 wake-up for some other reason.
-
-
 @c
 
-for(uint16_t ct=1;ct<20000;ct++);
 if (handleIrq != NULL)
    {@/
     handleIrq(pInput_s);
     handleIrq = NULL;
     }
 
-for(uint16_t ct=1;ct<30000;ct++);
 @
 Here we scale the \.{PWC} durations and apply the ``deadBand''.
 @c
+
 
  {
  int16_t outputCh1;
@@ -471,24 +454,19 @@ Here we scale the \.{PWC} durations and apply the ``deadBand''.
 
 translate(pTranslation_s);
 
-if (pInput_s->controlMode == REMOTE )
+if (pInput_s->controlMode == REMOTE)
   setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
  else
    setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
 
 @
 The LED is used to indicate when both channels PWM's are zeros.
-
 @c
-pTranslation_s->larboardOut=0;
-
 
 if(pTranslation_s->larboardOut || pTranslation_s->starboardOut)
     ledCntl(OFF);
  else
-    ledCntl(OFF);
-
-
+    ledCntl(ON);
 
 @/
   } /* end for */
@@ -597,7 +575,6 @@ void lostSignal(inputStruct *pInput_s)
  pInput_s->edge = CH2RISE;
 
  edgeSelect(pInput_s);
- ledCntl(OFF);
 
 @/}@/
 
@@ -611,12 +588,14 @@ void diveTick(inputStruct *pInput_s)
 static uint8_t tickCount = 0;
 
 // we are here 64 times per second
-
+# if 0
 if (pInput_s->edge == CH2RISE) // while timing isn't too critical
    {
     ADCSRA |= (1<<ADEN); // Connect the MUX to the ADC and enable it
     ADMUX = (ADMUX & 0xf0)|2U; // Set MUX to channel 2
    }
+
+#endif
 
 if (!(++tickCount)) // every 256 ticks
     {
@@ -879,6 +858,24 @@ void larboardDirection(int8_t state)
 
 @/}@/
 
+
+
+@
+Here is a simple procedure to reset the watchdog timer.
+Included here is setting ./{WDIE} so that it stays in interrupt mode.
+If this isn't done the next timeout will reset it.
+@c
+void feedDog(void)
+@/{@/
+
+  wdt_reset();
+
+ # if WATCHDOG
+   WDTCSR |= (1<<WDIE);
+ # else
+   WDTCSR &= ~(1<<WDIE);
+ # endif
+@/}@/
 
 
 
