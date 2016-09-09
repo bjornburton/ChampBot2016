@@ -463,11 +463,12 @@ if (pInput_s->controlMode == REMOTE)
 The LED is used to indicate when both channels PWM's are zeros.
 @c
 
+#if 1
 if(pTranslation_s->larboardOut || pTranslation_s->starboardOut)
     ledCntl(OFF);
  else
     ledCntl(ON);
-
+#endif
 @/
   } /* end for */
 @/
@@ -588,14 +589,12 @@ void diveTick(inputStruct *pInput_s)
 static uint8_t tickCount = 0;
 
 // we are here 64 times per second
-# if 0
 if (pInput_s->edge == CH2RISE) // while timing isn't too critical
    {
     ADCSRA |= (1<<ADEN); // Connect the MUX to the ADC and enable it
     ADMUX = (ADMUX & 0xf0)|2U; // Set MUX to channel 2
    }
 
-#endif
 
 if (!(++tickCount)) // every 256 ticks
     {
@@ -623,19 +622,21 @@ the sum may safely be of size |uint16_t|.
 @c
 void pressureCalc(inputStruct *pInput_s)
 @/{@/
- static uint16_t buffStart[33];
- const  uint16_t *buffEnd = buffStart+33;
+ static uint16_t buffStart[32]={0};  
+ const  uint16_t *buffEnd = buffStart+31;
  static uint16_t *buffIndex = buffStart;
- static uint16_t sum; // range 0 to 32768
+ static uint16_t sum; // Range 0 to 32768
 
- ADCSRA &= ~(1<<ADEN); // reconnect the MUX to the comparator
+ ADCSRA &= ~(1<<ADEN); // Reconnect the MUX to the comparator
+ ADMUX = (ADMUX & 0xf0)|1U;  /* Set back to MUX channel 1 */
 
- *buffIndex = ADCL & ((uint16_t)ADCH)<<8; // drop in the ADC value
- sum += *buffIndex; // include this new find in the sum
+ sum -= *buffIndex; // Remove the oldest item from the sum
+ *buffIndex = (uint16_t)ADCW; // Read the whole 16 bit word with ADCW
+ sum += *buffIndex; // Include this new item in the sum
  buffIndex = (buffIndex != buffEnd)?buffIndex+1:buffStart;
- sum -= *buffIndex; // remove the oldest item from the sum
 
  pInput_s->pressure = (sum>>5);
+
 
 @/}@/
 
@@ -942,7 +943,7 @@ will be the first sample used for the derivatives.
 In mode |MANUAL| it just returns from here, but in |AUTOMATIC| the output
 is updated.
 
-The derivitives are ithen calculated, from the four last samples of the
+The derivitives are then calculated, from the four last samples of the
 process variable, using the coefficients.
 This begins at the oldest sample, indicated by offest, and walks to the latest.
 
@@ -1052,10 +1053,10 @@ Conversion will take about 191~$\mu$s and will complete with an interrupt.
 {
  // ADCSRA – ADC Control and Status Register A
  ADCSRA &= ~(1<<ADEN); // Conn the MUX to (-) input of comparator (sec 23.2)
- ADCSRA &= ~((1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)); // prescaler to 128
+ ADCSRA |= ((1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)); // prescaler to 128
 
  # if ANALOG
-   ADCSRA &= ~(1<<ADIE); // ADC to interrupt on completion
+   ADCSRA |= (1<<ADIE); // ADC to interrupt on completion
  # endif
 
  // 23.3.1 ADCSRB – ADC Control and Status Register B
@@ -1080,7 +1081,7 @@ Conversion will take about 191~$\mu$s and will complete with an interrupt.
 
  // 24.9.1 ADMUX – ADC Multiplexer Selection Register
  ADMUX = (ADMUX & 0xf0) | 0U; // Set to mux channel 0
- ADMUX &= ~(1<<REFS0); // Set ADC to use VREF
+ ADMUX |= (1<<REFS0)|(1<<REFS1); // Set ADC to use internal 1.1 V reference
 
 }
 
@@ -1130,10 +1131,10 @@ It needs to be long enough to allow for the 0.25 ms autonomous dive loop.
 {
  wdt_reset();
  MCUSR &= ~(1<<WDRF);
- WDTCSR |= (1<<WDCE) | (1<<WDE); // this unlocks it
+ WDTCSR |= (1<<WDCE) | (1<<WDE); // This combo unlocks it
  WDTCSR = (1<<WDE)|(1<<WDP2) | (1<<WDP0);
- WDTCSR |= (1<<WDIE); // set interrupt on
-                             // reset after about 0.5 seconds (see 11.9.2)
+ WDTCSR |= (1<<WDIE); // Set the interrupt on
+  // Reset is after about 0.5 seconds (see 11.9.2)
 }
 
 @
