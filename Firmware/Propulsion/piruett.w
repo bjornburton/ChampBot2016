@@ -146,15 +146,16 @@ older word ``larboard''.
 
 @* Other definitions. It is critical that |MAX_DUTYCYCLE| is
 98\% or less.
-@d CH2RISE 0   // rising edge of RC's remote channel 2
-@d CH2FALL 1   // falling edge of RC's remote channel 2
-@d CH1FALL 2   // falling edge of RC's remote channel 1
+@d CH1RISE 0   // The rising edge of RC's remote channel 1
+@d CH1FALL 1   // The falling edge of RC's remote channel 1
+@d CH2RISE 2   // The rising edge of RC's remote channel 2
+@d CH2FALL 3   // The falling edge of RC's remote channel 2
 @d MAX_DUTYCYCLE 98 // 98\% to support charge pump of bridge-driver
-@d OFF 0  // the mode of being surfaced
-@d REMOTE 1  // the mode of being surfaced
-@d DIVING 2    // the mode of actively diving
-@d SUBMERGED 3 // the mode of being submerged
-@d PIDSAMPCT 4 // the PID sample count for derivatives
+@d OFF 0  // The mode of being surfaced
+@d REMOTE 1  // The mode of being surfaced
+@d DIVING 2    // The mode of actively diving
+@d SUBMERGED 3 // The mode of being submerged
+@d PIDSAMPCT 4 // The PID sample count for derivatives
 
 
 @* Interrupt Controls.
@@ -331,7 +332,7 @@ This is the structure that holds output parameters.
 @c
 transStruct* pTranslation_s = &(transStruct){
     @[@].deadBand = 10,
-    @[@].track = 100 /* represents unit-less prop-to-prop distance */
+    @[@].track = 100 // Represents unit-less prop-to-prop distance 
     };
 
 
@@ -588,15 +589,15 @@ void diveTick(inputStruct *pInput_s)
 @/{@/
 static uint8_t tickCount = 0;
 
-// we are here 64 times per second
-if (pInput_s->edge == CH2RISE) // while timing isn't too critical
+// We are here 64 times per second
+if (pInput_s->edge == CH2RISE) // While timing isn't too critical
    {
     ADCSRA |= (1<<ADEN); // Connect the MUX to the ADC and enable it
     ADMUX = (ADMUX & 0xf0)|2U; // Set MUX to channel 2
    }
 
 
-if (!(++tickCount)) // every 256 ticks
+if (!(++tickCount)) // Every 256 ticks
     {
      if (pInput_s->controlMode >= DIVING)
         {
@@ -621,51 +622,54 @@ the sum may safely be of size |uint16_t|.
 
 @c
 void pressureCalc(inputStruct *pInput_s)
-	@/{@/
-	 static uint16_t buffStart[1<<5]={0};
-	 const  uint16_t *buffEnd = buffStart+(1<<5)-1;
-	 static uint16_t *buffIndex = buffStart;
-	 static uint16_t sum; // accommodates size up to
+        @/{@/
+         static uint16_t buffStart[1<<5]={0};
+         const  uint16_t *buffEnd = buffStart+(1<<5)-1;
+         static uint16_t *buffIndex = buffStart;
+         static uint16_t sum; // Accommodates size up to 1<<6 only
 
          ADCSRA &= ~(1<<ADEN); // Reconnect the MUX to the comparator
-	 ADMUX = (ADMUX & 0xf0)|1U;  // Set back to MUX channel 1
+         ADMUX = (ADMUX & 0xf0)|1U;  // Set back to MUX channel 1
 
-	 sum -= *buffIndex; // Remove the oldest item from the sum
-	 *buffIndex = (uint16_t)ADCW; // Read the whole 16 bit word with ADCW
-	 sum += *buffIndex; // Include this new item in the sum
-	 buffIndex = (buffIndex != buffEnd)?buffIndex+1:buffStart;
+         sum -= *buffIndex; // Remove the oldest item from the sum
+         *buffIndex = (uint16_t)ADCW; // Read the whole 16 bit word with ADCW
+         sum += *buffIndex; // Include this new item in the sum
+         buffIndex = (buffIndex != buffEnd)?buffIndex+1:buffStart;
 
-	 pInput_s->pressure = (sum>>5);
+         pInput_s->pressure = (sum>>5);
 #if 0
-	if(pInput_s->pressure >200)
-	    ledCntl(OFF);
-	 else
-	    ledCntl(ON);
+        if(pInput_s->pressure >200)
+            ledCntl(OFF);
+         else
+            ledCntl(ON);
 #endif
-	@/}@/
+        @/}@/
 
+@
+The procedure edgeSelect configures the ``Input Capture'' unit to capture on
+the expected edge type from the remote control's proportional signal.
 
-	@
-	The procedure edgeSelect configures the ``Input Capture'' unit to capture on
-	the expected edge type from the remote control's proportional signal.
+@c
+void edgeSelect(inputStruct *pInput_s)
+    @/{@/
 
-	@c
-	void edgeSelect(inputStruct *pInput_s)
-	@/{@/
-
-	  switch(pInput_s->edge)
+   switch(pInput_s->edge)
      {
-   case CH2RISE: /* To wait for rising edge on servo-channel 2 */
-      ADMUX = (ADMUX & 0xf0)|1U;  /* Set to mux channel 1 */
-      TCCR1B |= (1<<ICES1);  /* Rising edge (23.3.2) */
-    break;
-   case CH2FALL:
-      ADMUX = (ADMUX & 0xf0)|1U; /* Set to mux channel 1 */
-      TCCR1B &= ~(1<<ICES1);  /* Falling edge (23.3.2) */
+   case CH1RISE: // To wait for rising edge on rx-channel 2
+      ADMUX = (ADMUX & 0xf0)|0U;  // Set to mux channel 0
+      TCCR1B |= (1<<ICES1);   // Rising edge (23.3.2)
     break;
    case CH1FALL:
-      ADMUX = (ADMUX & 0xf0)|0U; /* Set to mux channel 0 */
-      TCCR1B &= ~(1<<ICES1);  /* Falling edge (23.3.2) */
+      ADMUX = (ADMUX & 0xf0)|0U; // Set to mux channel 0
+      TCCR1B &= ~(1<<ICES1);  // Falling edge (23.3.2)
+    break;
+   case CH2RISE: // To wait for rising edge on rx-channel 2
+      ADMUX = (ADMUX & 0xf0)|1U;  // Set to mux channel 1
+      TCCR1B |= (1<<ICES1);   // Rising edge (23.3.2)
+    break;
+   case CH2FALL:
+      ADMUX = (ADMUX & 0xf0)|1U; // Set to mux channel
+      TCCR1B &= ~(1<<ICES1);  // Falling edge (23.3.2)
    }
 @
 Since the edge has been changed, the Input Capture Flag should be cleared.
