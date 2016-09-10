@@ -435,6 +435,7 @@ Here we scale the \.{PWC} durations and apply the ``deadBand''.
 
  if (pInput_s->controlMode != OFF)
     {
+     // Apply scaler
      outputCh1 = scaler(pInput_s->ch1duration, minIn, maxIn, minOut, maxOut);
      outputCh2 = scaler(pInput_s->ch2duration, minIn, maxIn, minOut, maxOut);
     }
@@ -444,6 +445,7 @@ Here we scale the \.{PWC} durations and apply the ``deadBand''.
       outputCh2 = 0;
      }
 
+     // Apply deadband`
  outputCh1 = (abs(outputCh1) > pTranslation_s->deadBand)?outputCh1:0;
  outputCh2 = (abs(outputCh2) > pTranslation_s->deadBand)?outputCh2:0;
 
@@ -463,7 +465,7 @@ if (pInput_s->controlMode == REMOTE)
 The LED is used to indicate when both channels PWM's are zeros.
 @c
 
-#if 1
+#if 1 
 if(pTranslation_s->larboardOut || pTranslation_s->starboardOut)
     ledCntl(OFF);
  else
@@ -621,35 +623,39 @@ the sum may safely be of size |uint16_t|.
 
 @c
 void pressureCalc(inputStruct *pInput_s)
-@/{@/
- static uint16_t buffStart[32]={0};  
- const  uint16_t *buffEnd = buffStart+31;
- static uint16_t *buffIndex = buffStart;
- static uint16_t sum; // Range 0 to 32768
+	@/{@/
+	 static uint16_t buffStart[1<<5]={0};
+	 const  uint16_t *buffEnd = buffStart+(1<<5)-1;
+	 static uint16_t *buffIndex = buffStart;
+	 static uint16_t sum; // accommodates size up to
 
- ADCSRA &= ~(1<<ADEN); // Reconnect the MUX to the comparator
- ADMUX = (ADMUX & 0xf0)|1U;  /* Set back to MUX channel 1 */
+         ADCSRA &= ~(1<<ADEN); // Reconnect the MUX to the comparator
+	 ADMUX = (ADMUX & 0xf0)|1U;  // Set back to MUX channel 1
 
- sum -= *buffIndex; // Remove the oldest item from the sum
- *buffIndex = (uint16_t)ADCW; // Read the whole 16 bit word with ADCW
- sum += *buffIndex; // Include this new item in the sum
- buffIndex = (buffIndex != buffEnd)?buffIndex+1:buffStart;
+	 sum -= *buffIndex; // Remove the oldest item from the sum
+	 *buffIndex = (uint16_t)ADCW; // Read the whole 16 bit word with ADCW
+	 sum += *buffIndex; // Include this new item in the sum
+	 buffIndex = (buffIndex != buffEnd)?buffIndex+1:buffStart;
 
- pInput_s->pressure = (sum>>5);
+	 pInput_s->pressure = (sum>>5);
+#if 0
+	if(pInput_s->pressure >200)
+	    ledCntl(OFF);
+	 else
+	    ledCntl(ON);
+#endif
+	@/}@/
 
 
-@/}@/
+	@
+	The procedure edgeSelect configures the ``Input Capture'' unit to capture on
+	the expected edge type from the remote control's proportional signal.
 
+	@c
+	void edgeSelect(inputStruct *pInput_s)
+	@/{@/
 
-@
-The procedure edgeSelect configures the ``Input Capture'' unit to capture on
-the expected edge type from the remote control's proportional signal.
-
-@c
-void edgeSelect(inputStruct *pInput_s)
-@/{@/
-
-  switch(pInput_s->edge)
+	  switch(pInput_s->edge)
      {
    case CH2RISE: /* To wait for rising edge on servo-channel 2 */
       ADMUX = (ADMUX & 0xf0)|1U;  /* Set to mux channel 1 */
