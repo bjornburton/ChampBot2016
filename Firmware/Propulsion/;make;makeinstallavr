@@ -159,15 +159,6 @@ older word ``larboard''.
 @d SUBMERGED 3 // the mode of being submerged
 @d PIDSAMPCT 4 // the PID sample count for derivatives
 
-
-@* Interrupt Controls.
-@d WATCHDOG ON // reset and all
-@d ANALOG ON
-@d TICK ON // TIMER2
-@d CAPTURE ON //TIMER1
-
-
-
 @ @<Include...@>=
 # include <avr/io.h> // need some port access
 # include <avr/interrupt.h> // have need of an interrupt
@@ -227,7 +218,7 @@ typedef struct {
 typedef struct {
     int16_t thrust;         // -255 to 255
     int16_t radius;         // -255 to 255
-    const int16_t track;    //    1 to 255
+    int16_t track;          //    1 to 255
     int16_t starboardOut;   // -255 to 255
     int16_t larboardOut;    // -255 to 255
     const int8_t  deadBand; // width of zero in terms of output units
@@ -256,7 +247,6 @@ void edgeSelect(inputStruct *);
 void translate(transStruct *);
 void setPwm(int16_t, int16_t);
 void lostSignal(inputStruct *);
-void feedDog(void);
 int16_t scaler(uint16_t input, uint16_t minIn,  uint16_t maxIn,
                                int16_t  minOut, int16_t  maxOut);
 int16_t int16clamp(int16_t value, int16_t min, int16_t max);
@@ -275,7 +265,6 @@ This input structure is to contain all of the external inputs.
 void @[@] (*handleIrq)(inputStruct *) = NULL;
 
 @/
-
 
 int main(void)
 @/{@/
@@ -301,16 +290,16 @@ Until we have collected the edges we will assume there is no signal.
 @c
 
 
-const uint16_t minIn = 14970U; // minimum normal value from receiver
-const uint16_t maxIn = 27530U; // maximum normal value from receiver
-const int16_t minOut = INT8_MIN;  // minimum value of thrust
-const int16_t maxOut = INT8_MAX;  // maximum value of thrust
+const uint16_t minIn = 14970; // minimum normal value from receiver
+const uint16_t maxIn = 27530; // maximum normal value from receiver
+const int16_t minOut = INT16_MIN;  // minimum value of thrust
+const int16_t maxOut = INT16_MAX;  // maximum value of thrust
 
 @
 Initially we will have the motors off and wait for the first rising edge
 from the remote. The PID parameters are instantiated and loaded with safe
 defaults. |takDdcSetPid()| is used to set the
-parameters.
+parameters. 
 @c
 inputStruct* pInput_s = &(inputStruct){@/
     @[@].edge = CH2RISE,@/
@@ -332,8 +321,7 @@ inputStruct* pInput_s = &(inputStruct){@/
 This is the structure that holds output parameters.
 @c
 transStruct* pTranslation_s = &(transStruct){
-    @[@].deadBand = 10,
-    @[@].track = 100 /* represents unit-less prop-to-prop distance */
+    @[@].deadBand = 10
     };
 
 
@@ -342,10 +330,10 @@ Here the interrupts are disabled so that configuring them doesn't set it off.
 @c
  cli();
 @/
-@<Initialize watchdog timer...@>
 @<Initialize the inputs and capture mode...@>
-@<Initialize pin outputs...@>
 @<Initialize tick timer...@>
+@<Initialize pin outputs...@>
+@<Initialize watchdog timer...@>
 @/
 @
 Any interrupt function requires that bit ``Global Interrupt Enable''
@@ -381,6 +369,7 @@ This stumped me for a good while.
 @<Configure to idle on sleep...@>
 @/
 
+ledCntl(OFF);
 
 @
 Since |edge| is already set, calling |edgeSelect()| will get it ready for
@@ -395,6 +384,7 @@ It should spend most of its time in ``sleep\_mode'', comming out at each
 interrupt event caused by an edge, tick or watchdog timeout.
 @c
 
+
  for (;;)
   {@/
 
@@ -405,8 +395,7 @@ Each sucessive loop will finish in the same way.
 After three passes |translation_s| will have good values to work with.
 
 @c
-  // if we are here, all is well.
- feedDog();
+
  sleep_mode();
 
 @
@@ -416,8 +405,9 @@ The pointer |handleIrq| will be assigned the value of the responsible
 function and then executed.
 After that the \.{IRQ} is nulled so as to avoid repeating the action, should it
 wake-up for some other reason.
-@c
 
+
+@c
 if (handleIrq != NULL)
    {@/
     handleIrq(pInput_s);
@@ -428,14 +418,12 @@ if (handleIrq != NULL)
 Here we scale the \.{PWC} durations and apply the ``deadBand''.
 @c
 
-
  {
  int16_t outputCh1;
  int16_t outputCh2;
 
  if (pInput_s->controlMode != OFF)
     {
-     // Apply scaler
      outputCh1 = scaler(pInput_s->ch1duration, minIn, maxIn, minOut, maxOut);
      outputCh2 = scaler(pInput_s->ch2duration, minIn, maxIn, minOut, maxOut);
     }
@@ -445,32 +433,33 @@ Here we scale the \.{PWC} durations and apply the ``deadBand''.
       outputCh2 = 0;
      }
 
-     // Apply deadband`
  outputCh1 = (abs(outputCh1) > pTranslation_s->deadBand)?outputCh1:0;
  outputCh2 = (abs(outputCh2) > pTranslation_s->deadBand)?outputCh2:0;
 
  pTranslation_s->radius = outputCh1;
  pTranslation_s->thrust = outputCh2;
 
+ pTranslation_s->track = 100; /* represents unit-less prop-to-prop distance */
  }
 
 translate(pTranslation_s);
 
-if (pInput_s->controlMode == REMOTE)
-  setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
+if (pInput_s->controlMode == REMOTE )
+   setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
  else
    setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
 
 @
 The LED is used to indicate when both channels PWM's are zeros.
-@c
-
-#if 1 
+//@c
 if(pTranslation_s->larboardOut || pTranslation_s->starboardOut)
     ledCntl(OFF);
  else
-    ledCntl(ON);
-#endif
+    ledCntl(OFF);
+@c
+
+
+
 @/
   } /* end for */
 @/
@@ -498,6 +487,7 @@ ISR (TIMER1_CAPT_vect)
 Here is the \.{ISR} that fires at at about 64 Hz for the main dive tick.
 This is used for the dive-control loop.
 @c
+
 ISR (TIMER2_COMPA_vect)
 @/{@/
  handleIrq = &diveTick;
@@ -513,12 +503,12 @@ ISR (ADC_vect)
  handleIrq = &pressureCalc;
 @/}@/
 
+
 @
 When the watchdog timer expires, this vector is called.
 This is what happens if the remote's transmitter signal is not received.
 It calls a variant of |pwcCalc| that only sets the controlMode to OFF.
 @c
-
 ISR (WDT_vect)
 @/{@/
  handleIrq = &lostSignal;
@@ -541,8 +531,8 @@ On the falling edges we can compute the durations using modulus subtraction
 and then set the edge index for the next edge.
 Channel 2 leads so that rise is first.
 
-Arrival at the last case establishes that there was a signal and sets mode 
-to REMOTE. 
+Arrival at the last case establishes that there was a signal, clears
+the flag.
 @c
 
 
@@ -569,16 +559,13 @@ edgeSelect(pInput_s);
 
 @
 This procedure sets output to zero in the event of a lost signal.
-Note that \.{WDIE} is reset to 1 so that it remains in interrupt-only mode.
 @c
 void lostSignal(inputStruct *pInput_s)
 @/{@/
-
  pInput_s->controlMode = OFF;
  pInput_s->edge = CH2RISE;
 
  edgeSelect(pInput_s);
-
 @/}@/
 
 @
@@ -591,12 +578,12 @@ void diveTick(inputStruct *pInput_s)
 static uint8_t tickCount = 0;
 
 // we are here 64 times per second
+
 if (pInput_s->edge == CH2RISE) // while timing isn't too critical
    {
     ADCSRA |= (1<<ADEN); // Connect the MUX to the ADC and enable it
     ADMUX = (ADMUX & 0xf0)|2U; // Set MUX to channel 2
    }
-
 
 if (!(++tickCount)) // every 256 ticks
     {
@@ -606,6 +593,7 @@ if (!(++tickCount)) // every 256 ticks
          takDdc(pInput_s->pPid_s);
          }
 
+     wdt_reset(); /* watchdog timer is reset */
     }
 
 @/}@/
@@ -623,39 +611,33 @@ the sum may safely be of size |uint16_t|.
 
 @c
 void pressureCalc(inputStruct *pInput_s)
-	@/{@/
-	 static uint16_t buffStart[1<<5]={0};
-	 const  uint16_t *buffEnd = buffStart+(1<<5)-1;
-	 static uint16_t *buffIndex = buffStart;
-	 static uint16_t sum; // accommodates size up to
+@/{@/
+ static uint16_t buffStart[33];
+ const  uint16_t *buffEnd = buffStart+33;
+ static uint16_t *buffIndex = buffStart;
+ static uint16_t sum; // range 0 to 32768
 
-         ADCSRA &= ~(1<<ADEN); // Reconnect the MUX to the comparator
-	 ADMUX = (ADMUX & 0xf0)|1U;  // Set back to MUX channel 1
+ ADCSRA &= ~(1<<ADEN); // reconnect the MUX to the comparator
 
-	 sum -= *buffIndex; // Remove the oldest item from the sum
-	 *buffIndex = (uint16_t)ADCW; // Read the whole 16 bit word with ADCW
-	 sum += *buffIndex; // Include this new item in the sum
-	 buffIndex = (buffIndex != buffEnd)?buffIndex+1:buffStart;
+ *buffIndex = ADCL & ((uint16_t)ADCH)<<8; // drop in the ADC value
+ sum += *buffIndex; // include this new find in the sum
+ buffIndex = (buffIndex != buffEnd)?buffIndex+1:buffStart;
+ sum -= *buffIndex; // remove the oldest item from the sum
 
-	 pInput_s->pressure = (sum>>5);
-#if 0
-	if(pInput_s->pressure >200)
-	    ledCntl(OFF);
-	 else
-	    ledCntl(ON);
-#endif
-	@/}@/
+ pInput_s->pressure = (sum>>5);
+
+@/}@/
 
 
-	@
-	The procedure edgeSelect configures the ``Input Capture'' unit to capture on
-	the expected edge type from the remote control's proportional signal.
+@
+The procedure edgeSelect configures the ``Input Capture'' unit to capture on
+the expected edge type from the remote control's proportional signal.
 
-	@c
-	void edgeSelect(inputStruct *pInput_s)
-	@/{@/
+@c
+void edgeSelect(inputStruct *pInput_s)
+@/{@/
 
-	  switch(pInput_s->edge)
+  switch(pInput_s->edge)
      {
    case CH2RISE: /* To wait for rising edge on servo-channel 2 */
       ADMUX = (ADMUX & 0xf0)|1U;  /* Set to mux channel 1 */
@@ -868,25 +850,6 @@ void larboardDirection(int8_t state)
 
 
 @
-Here is a simple procedure to reset the watchdog timer.
-Included here is setting ./{WDIE} so that it stays in interrupt mode.
-If this isn't done the next timeout will reset it.
-@c
-void feedDog(void)
-@/{@/
-
-  wdt_reset();
-
- # if WATCHDOG
-   WDTCSR |= (1<<WDIE);
- # else
-   WDTCSR &= ~(1<<WDIE);
- # endif
-@/}@/
-
-
-
-@
 Here is a simple procedure to set thrust direction on the starboard motor.
 @c
 void starboardDirection(int8_t state)
@@ -949,7 +912,7 @@ will be the first sample used for the derivatives.
 In mode |MANUAL| it just returns from here, but in |AUTOMATIC| the output
 is updated.
 
-The derivitives are then calculated, from the four last samples of the
+The derivitives are ithen calculated, from the four last samples of the
 process variable, using the coefficients.
 This begins at the oldest sample, indicated by offest, and walks to the latest.
 
@@ -1008,7 +971,7 @@ pPar_s->pPvLast = pPar_s->pPvN + (++offset%PIDSAMPCT);
     pPar_s->m = int16clamp(pPar_s->m, pPar_s->mMin, pPar_s->mMax);
    }
 
-
+ 
  return pPar_s->m;
 @/}@/
 
@@ -1059,11 +1022,8 @@ Conversion will take about 191~$\mu$s and will complete with an interrupt.
 {
  // ADCSRA – ADC Control and Status Register A
  ADCSRA &= ~(1<<ADEN); // Conn the MUX to (-) input of comparator (sec 23.2)
- ADCSRA |= ((1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)); // prescaler to 128
-
- # if ANALOG
-   ADCSRA |= (1<<ADIE); // ADC to interrupt on completion
- # endif
+ ADCSRA &= ~((1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)); // prescaler to 128
+ ADCSRA &= ~(1<<ADIE); // ADC to interrupt on completion
 
  // 23.3.1 ADCSRB – ADC Control and Status Register B
  ADCSRB |= (1<<ACME);  // Conn the MUX to (-) input of comparator (sec 23.2)
@@ -1077,9 +1037,7 @@ Conversion will take about 191~$\mu$s and will complete with an interrupt.
  ACSR   |= (1<<ACIS1); // Set for both rising and falling edge (sec 23.3.2)
 
  // 16.11.8 TIMSK1 – Timer/Counter1 Interrupt Mask Register
- # if CAPTURE
-   TIMSK1 |= (1<<ICIE1); // Enable input capture interrupt (sec 16.11.8)
- # endif
+ TIMSK1 |= (1<<ICIE1); // Enable input capture interrupt (sec 16.11.8)
 
  // 16.11.2 TCCR1B – Timer/Counter1 Control Register B
  TCCR1B |= (1<<ICNC1); // Enable input capture noise canceling (sec 16.11.2)
@@ -1087,7 +1045,7 @@ Conversion will take about 191~$\mu$s and will complete with an interrupt.
 
  // 24.9.1 ADMUX – ADC Multiplexer Selection Register
  ADMUX = (ADMUX & 0xf0) | 0U; // Set to mux channel 0
- ADMUX |= (1<<REFS0)|(1<<REFS1); // Set ADC to use internal 1.1 V reference
+ ADMUX &= ~(1<<REFS0); // Set ADC to use VREF
 
 }
 
@@ -1121,26 +1079,22 @@ The test could look a bit like |"!(++tickCount \& ~|divisor|U)"| except at
 TCCR2B |= (1<<CS22) | (1<<CS21) | (1<<CS20); // maximum prescale (see 18.11.2)
 TCCR2A |= (1<<WGM21); // CTC mode (see 18.11.1)
 OCR2A = 243U; // Do I need to make this clearer?
-# if TICK
- TIMSK2 |= (1<<OCIE2A); // Interrupt on a compare match
-# endif
+TIMSK2 |= (1<<OCIE2A); // Interrupt on a compare match
 }
 
 
 @
 See section 11.8 in the datasheet for details on the Watchdog Timer.
-This is in the ``Interrupt Mode'' through \.{WDIE}.
-When controlled remotly or in an autonomous dive this should not time-out.
+This is in the ``Interrupt Mode''.
+When controlled remotlely or in an autonomous dive this should not time-out.
 It needs to be long enough to allow for the 0.25 ms autonomous dive loop.
 
 @ @<Initialize watchdog timer...@>=
 {
- wdt_reset();
- MCUSR &= ~(1<<WDRF);
- WDTCSR |= (1<<WDCE) | (1<<WDE); // This combo unlocks it
- WDTCSR = (1<<WDE)|(1<<WDP2) | (1<<WDP0);
- WDTCSR |= (1<<WDIE); // Set the interrupt on
-  // Reset is after about 0.5 seconds (see 11.9.2)
+
+ WDTCSR |= (1<<WDCE) | (1<<WDE);
+ WDTCSR = (1<<WDIE) | (1<<WDP2) | (1<<WDP0);
+                             // reset after about 0.5 seconds (see 11.9.2)
 }
 
 @

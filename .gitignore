@@ -10,3 +10,6 @@
 *.scn
 *.idx
 *.elf
+*.tex
+*.dot
+*.expand
