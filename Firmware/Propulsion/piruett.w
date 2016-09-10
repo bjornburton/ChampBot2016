@@ -54,7 +54,7 @@ performed by full reverse thrust but, with this new feature, this thrust is
 modulated to maintain a specified depth, as determined by a pressure sensor in
 the electronics bay.
 The sensor signal connects to ADC2 (\.{PC2}) through a voltage divider.
-The divider scales the 5 volt range of the sensor to the 1.1 volt range of the
+The divider scales the 5 volt range of the sensor to the 1.1~volt range of the
 ADC.
 By program, it will maintain this depth for 12 seconds,
 two seconds longer than required.
@@ -63,11 +63,13 @@ two seconds longer than required.
 
 
 @** Implementation.
-The Futaba receiver has two \.{PWC} channels.
-The pulse-width from the receiver is at 20~ms intervals.
-The on-time ranges from 1000--2000~$\mu$s including trim.
-1500~$\mu$s is the pulse-width for stop.
-The levers cover $\pm$400~$\mu$s and the trim covers the last 100~$\mu$s.
+The Flysky FS-IA6 receiver has six \.{PWC} channels.
+The pulse-width from the receiver is at 20~ms intervals but is adjustable.
+The pulses start simultaniously but end at the time corosponding to the
+controls.
+The on-time probably ranges from 1000--2000~$\mu$s including trim.
+1500~$\mu$s is the pulse-width for center or stop.
+The levers may cover $\pm$400~$\mu$s and the trim may cover the last 100~$\mu$s.
 
 The median time will be subtracted from them for a pair of signed values
 thrust and radius.
@@ -100,16 +102,11 @@ For the \.{PWC} measurement, this app note, AVR135, is helpful:
 
 In the datasheet, section 16.6.3 is helpful.
 
-An interesting thing about this Futaba receiver is that the pulses are in
-series.
-The channel two's pulse is first, followed the channel one.
-In fact, channel two's fall is perfectly aligned with channel one's rise.
-This means that it will be possible to capture all of the pulses.
-
-After the two pulses are captured, there's an 18~ms dead-time before the next
-round.
+After each pulses captured from its respective channel,
+there's an 18~ms dead-time.
 That's over 250,000 clock cycles.
-This will provide ample time to do math and set the motor \.{PWM}s.
+This will provide ample time to sample pressure and do all of the math
+and set the motor \.{PWM}s.
 
 
 Extensive use was made of the datasheet, Atmel
@@ -281,15 +278,16 @@ int main(void)
 @/{@/
 
 @
-The Futaba receiver leads with channel two, rising edge, so we will start
-looking for that by setting |edge| to look for a rise on channel 2.
+The Flysky FS-IA6 receiver channels start with a synchronous  rising edge
+so we will start looking for that by setting |edge| to look for a rise on
+channel 1.
 
-Center position of the controller results in a count of about 21250, hard
-larboard, or forward, with trim reports about 29100 and hard starboard, or
-reverse, with trim reports about 13400.
+Center position of the controller should result in a count of about 2400, hard
+larboard, or forward, with trim may report about 31200 and hard starboard, or
+reverse, with trim reports about 16800.
 
 About $4 \over 5$ of that range are the full swing of the stick, without trim.
-This is from about 14970 and 27530 ticks.
+This is from about 17600 and 30400 ticks.
 
 |.minIn| |.maxIn| are the endpoints of the normal stick travel.
 The units are raw counts as the Input Capture Register will use.
@@ -301,8 +299,8 @@ Until we have collected the edges we will assume there is no signal.
 @c
 
 
-const uint16_t minIn = 14970U; // minimum normal value from receiver
-const uint16_t maxIn = 27530U; // maximum normal value from receiver
+const uint16_t minIn = 17600U; // minimum normal value from receiver
+const uint16_t maxIn = 30400U; // maximum normal value from receiver
 const int16_t minOut = INT8_MIN;  // minimum value of thrust
 const int16_t maxOut = INT8_MAX;  // maximum value of thrust
 
@@ -537,9 +535,9 @@ of the $2^{16}$~counts of the 16~bit register.
 void pwcCalc(inputStruct *pInput_s)
 @/{@/
 @
-On the falling edges we can compute the durations using modulus subtraction
-and then set the edge index for the next edge.
-Channel 2 leads so that rise is first.
+Counting always starts on the rising edge and stops on the falling. 
+On the falling edges we can compute the durations using modulus subtraction.
+Flysky starts .
 
 Arrival at the last case establishes that there was a signal and sets mode 
 to REMOTE. 
