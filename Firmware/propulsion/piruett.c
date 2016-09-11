@@ -124,7 +124,6 @@ void edgeSelect(inputStruct*);
 void translate(transStruct*);
 void setPwm(int16_t,int16_t);
 void lostSignal(inputStruct*);
-void feedDog(void);
 int16_t scaler(uint16_t input,uint16_t minIn,uint16_t maxIn,
 int16_t minOut,int16_t maxOut);
 int16_t int16clamp(int16_t value,int16_t min,int16_t max);
@@ -135,7 +134,7 @@ int16_t takDdc(ddcParameters*);
 #line 126 "./piruett.w"
 
 /*13:*/
-#line 273 "./piruett.w"
+#line 272 "./piruett.w"
 
 void(*handleIrq)(inputStruct*)= NULL;
 
@@ -150,7 +149,7 @@ int main(void)
 
 
 /*:2*//*14:*/
-#line 301 "./piruett.w"
+#line 300 "./piruett.w"
 
 
 
@@ -160,7 +159,7 @@ const int16_t minOut= INT8_MIN;
 const int16_t maxOut= INT8_MAX;
 
 /*:14*//*15:*/
-#line 314 "./piruett.w"
+#line 313 "./piruett.w"
 
 inputStruct*pInput_s= &(inputStruct){
 .edge= CH1RISE,
@@ -179,7 +178,7 @@ inputStruct*pInput_s= &(inputStruct){
 
 
 /*:15*//*16:*/
-#line 333 "./piruett.w"
+#line 332 "./piruett.w"
 
 transStruct*pTranslation_s= &(transStruct){
 .deadBand= 10,
@@ -188,12 +187,12 @@ transStruct*pTranslation_s= &(transStruct){
 
 
 /*:16*//*17:*/
-#line 342 "./piruett.w"
+#line 341 "./piruett.w"
 
 cli();
 
-/*64:*/
-#line 1153 "./piruett.w"
+/*63:*/
+#line 1141 "./piruett.w"
 
 {
 wdt_reset();
@@ -204,11 +203,11 @@ WDTCSR|= (1<<WDIE);
 
 }
 
-/*:64*/
-#line 345 "./piruett.w"
+/*:63*/
+#line 344 "./piruett.w"
 
-/*60:*/
-#line 1075 "./piruett.w"
+/*59:*/
+#line 1063 "./piruett.w"
 
 {
 
@@ -245,11 +244,11 @@ ADMUX|= (1<<REFS0)|(1<<REFS1);
 
 }
 
-/*:60*/
-#line 346 "./piruett.w"
+/*:59*/
+#line 345 "./piruett.w"
 
-/*57:*/
-#line 1048 "./piruett.w"
+/*56:*/
+#line 1036 "./piruett.w"
 
 
 DDRB|= (1<<DDB5);
@@ -264,11 +263,11 @@ DDRD|= ((1<<DDD5)|(1<<DDD6));
 
 DDRD|= ((1<<DDD3)|(1<<DDD4));
 
-/*:57*/
-#line 347 "./piruett.w"
+/*:56*/
+#line 346 "./piruett.w"
 
-/*62:*/
-#line 1136 "./piruett.w"
+/*61:*/
+#line 1124 "./piruett.w"
 
 {
 TCCR2B|= (1<<CS22)|(1<<CS21)|(1<<CS20);
@@ -280,21 +279,21 @@ TIMSK2|= (1<<OCIE2A);
 }
 
 
-/*:62*/
-#line 348 "./piruett.w"
+/*:61*/
+#line 347 "./piruett.w"
 
 
 /*:17*//*18:*/
-#line 353 "./piruett.w"
+#line 352 "./piruett.w"
 
 sei();
 
 
 /*:18*//*19:*/
-#line 361 "./piruett.w"
+#line 360 "./piruett.w"
 
-/*66:*/
-#line 1172 "./piruett.w"
+/*65:*/
+#line 1160 "./piruett.w"
 
 {
 
@@ -309,35 +308,35 @@ TCCR0B|= (1<<CS01);
 }
 
 
-/*:66*/
-#line 362 "./piruett.w"
+/*:65*/
+#line 361 "./piruett.w"
 
 
 
 /*:19*//*20:*/
-#line 379 "./piruett.w"
+#line 378 "./piruett.w"
 
 
-/*58:*/
-#line 1062 "./piruett.w"
+/*57:*/
+#line 1050 "./piruett.w"
 
 {
 SMCR&= ~((1<<SM2)|(1<<SM1)|(1<<SM0));
 }
 
-/*:58*/
-#line 381 "./piruett.w"
+/*:57*/
+#line 380 "./piruett.w"
 
 
 
 
 /*:20*//*21:*/
-#line 389 "./piruett.w"
+#line 388 "./piruett.w"
 
 edgeSelect(pInput_s);
 
 /*:21*//*22:*/
-#line 396 "./piruett.w"
+#line 395 "./piruett.w"
 
 
 for(;;)
@@ -346,10 +345,16 @@ for(;;)
 /*:22*//*23:*/
 #line 408 "./piruett.w"
 
+#if WATCHDOG
+WDTCSR|= (1<<WDIE);
+#else
+WDTCSR&= ~(1<<WDIE);
+#endif
+
 sleep_mode();
 
 /*:23*//*24:*/
-#line 418 "./piruett.w"
+#line 424 "./piruett.w"
 
 
 if(handleIrq!=NULL)
@@ -359,7 +364,7 @@ handleIrq= NULL;
 }
 
 /*:24*//*25:*/
-#line 428 "./piruett.w"
+#line 434 "./piruett.w"
 
 
 
@@ -395,7 +400,7 @@ else
 setPwm(pTranslation_s->larboardOut,pTranslation_s->starboardOut);
 
 /*:25*//*26:*/
-#line 464 "./piruett.w"
+#line 470 "./piruett.w"
 
 
 #if 0
@@ -422,7 +427,7 @@ return 0;
 
 
 /*:26*//*28:*/
-#line 495 "./piruett.w"
+#line 501 "./piruett.w"
 
 
 ISR(TIMER1_CAPT_vect)
@@ -431,7 +436,7 @@ handleIrq= &pwcCalc;
 }
 
 /*:28*//*29:*/
-#line 505 "./piruett.w"
+#line 511 "./piruett.w"
 
 ISR(TIMER2_COMPA_vect)
 {
@@ -439,7 +444,7 @@ handleIrq= &diveTick;
 }
 
 /*:29*//*30:*/
-#line 514 "./piruett.w"
+#line 520 "./piruett.w"
 
 
 ISR(ADC_vect)
@@ -448,7 +453,7 @@ handleIrq= &pressureCalc;
 }
 
 /*:30*//*31:*/
-#line 525 "./piruett.w"
+#line 531 "./piruett.w"
 
 
 ISR(WDT_vect)
@@ -457,15 +462,15 @@ handleIrq= &lostSignal;
 }
 
 /*:31*//*32:*/
-#line 541 "./piruett.w"
+#line 547 "./piruett.w"
 
 void pwcCalc(inputStruct*pInput_s)
 {
 /*:32*//*33:*/
-#line 553 "./piruett.w"
+#line 560 "./piruett.w"
 
 
-feedDog();
+wdt_reset();
 
 
 switch(pInput_s->edge)
@@ -497,7 +502,7 @@ edgeSelect(pInput_s);
 }
 
 /*:33*//*34:*/
-#line 589 "./piruett.w"
+#line 596 "./piruett.w"
 
 void lostSignal(inputStruct*pInput_s)
 {
@@ -509,7 +514,7 @@ edgeSelect(pInput_s);
 }
 
 /*:34*//*35:*/
-#line 603 "./piruett.w"
+#line 610 "./piruett.w"
 
 void diveTick(inputStruct*pInput_s)
 {
@@ -537,7 +542,7 @@ takDdc(pInput_s->pPid_s);
 
 
 /*:35*//*36:*/
-#line 639 "./piruett.w"
+#line 646 "./piruett.w"
 
 void pressureCalc(inputStruct*pInput_s)
 {
@@ -564,7 +569,7 @@ ledCntl(ON);
 }
 
 /*:36*//*37:*/
-#line 668 "./piruett.w"
+#line 675 "./piruett.w"
 
 void edgeSelect(inputStruct*pInput_s)
 {
@@ -587,7 +592,7 @@ ADMUX= (ADMUX&0xf0)|1U;
 TCCR1B&= ~(1<<ICES1);
 }
 /*:37*//*38:*/
-#line 692 "./piruett.w"
+#line 699 "./piruett.w"
 
 
 TIFR1|= (1<<ICF1);
@@ -595,7 +600,7 @@ TIFR1|= (1<<ICF1);
 
 
 /*:38*//*40:*/
-#line 705 "./piruett.w"
+#line 712 "./piruett.w"
 
 int16_t scaler(uint16_t input,
 uint16_t minIn,
@@ -604,7 +609,7 @@ int16_t minOut,
 int16_t maxOut)
 {
 /*:40*//*41:*/
-#line 715 "./piruett.w"
+#line 722 "./piruett.w"
 
 
 if(input> maxIn)
@@ -615,7 +620,7 @@ return minOut;
 
 
 /*:41*//*42:*/
-#line 735 "./piruett.w"
+#line 742 "./piruett.w"
 
 const int32_t ampFact= 128L;
 
@@ -628,7 +633,7 @@ return(ampFact*(int32_t)input/gain)-offset;
 }
 
 /*:42*//*43:*/
-#line 761 "./piruett.w"
+#line 768 "./piruett.w"
 
 
 void translate(transStruct*trans_s)
@@ -644,14 +649,14 @@ const int16_t ampFact= 128;
 
 
 /*:43*//*44:*/
-#line 781 "./piruett.w"
+#line 788 "./piruett.w"
 
 difference= (speed*((ampFact*trans_s->radius)/UINT8_MAX))/ampFact;
 rotation= (trans_s->track*((ampFact*difference)/UINT8_MAX))/ampFact;
 piruett= trans_s->radius;
 
 /*:44*//*45:*/
-#line 797 "./piruett.w"
+#line 804 "./piruett.w"
 
 if(trans_s->thrust!=STOPPED&&lock==OFF)
 {
@@ -664,7 +669,7 @@ lock= (abs(piruett)> pirLockLevel)?ON:OFF;
 
 trans_s->larboardOut= int16clamp(piruett,-max,max);
 /*:45*//*46:*/
-#line 810 "./piruett.w"
+#line 817 "./piruett.w"
 
 piruett= -piruett;
 trans_s->starboardOut= int16clamp(piruett,-max,max);
@@ -674,7 +679,7 @@ trans_s->starboardOut= int16clamp(piruett,-max,max);
 
 
 /*:46*//*47:*/
-#line 821 "./piruett.w"
+#line 828 "./piruett.w"
 
 void setPwm(int16_t larboardOut,int16_t starboardOut)
 {
@@ -702,7 +707,7 @@ OCR0B= abs(starboardOut);
 }
 
 /*:47*//*48:*/
-#line 849 "./piruett.w"
+#line 856 "./piruett.w"
 
 if(larboardOut||starboardOut)
 relayCntl(CLOSED);
@@ -712,7 +717,7 @@ relayCntl(OPEN);
 }
 
 /*:48*//*49:*/
-#line 859 "./piruett.w"
+#line 866 "./piruett.w"
 
 void ledCntl(int8_t state)
 {
@@ -720,7 +725,7 @@ PORTB= state?PORTB|(1<<PORTB5):PORTB&~(1<<PORTB5);
 }
 
 /*:49*//*50:*/
-#line 867 "./piruett.w"
+#line 874 "./piruett.w"
 
 void relayCntl(int8_t state)
 {
@@ -728,7 +733,7 @@ PORTB= state?PORTB|(1<<PORTB0):PORTB&~(1<<PORTB0);
 }
 
 /*:50*//*51:*/
-#line 875 "./piruett.w"
+#line 882 "./piruett.w"
 
 void larboardDirection(int8_t state)
 {
@@ -742,24 +747,7 @@ PORTD|= (1<<PORTD3);
 
 
 /*:51*//*52:*/
-#line 891 "./piruett.w"
-
-void feedDog(void)
-{
-
-wdt_reset();
-
-#if WATCHDOG
-WDTCSR|= (1<<WDIE);
-#else
-WDTCSR&= ~(1<<WDIE);
-#endif
-}
-
-
-
-/*:52*//*53:*/
-#line 908 "./piruett.w"
+#line 896 "./piruett.w"
 
 void starboardDirection(int8_t state)
 {
@@ -769,16 +757,16 @@ else
 PORTD|= (1<<PORTD4);
 }
 
-/*:53*//*54:*/
-#line 919 "./piruett.w"
+/*:52*//*53:*/
+#line 907 "./piruett.w"
 
 int16_t int16clamp(int16_t value,int16_t min,int16_t max)
 {
 return(value> max)?max:(value<min)?min:value;
 }
 
-/*:54*//*55:*/
-#line 986 "./piruett.w"
+/*:53*//*54:*/
+#line 974 "./piruett.w"
 
 
 int16_t takDdc(ddcParameters*pPar_s)
@@ -825,8 +813,8 @@ pPar_s->m= int16clamp(pPar_s->m,pPar_s->mMin,pPar_s->mMax);
 return pPar_s->m;
 }
 
-/*:55*//*56:*/
-#line 1035 "./piruett.w"
+/*:54*//*55:*/
+#line 1023 "./piruett.w"
 
 void takDdcSetPid(ddcParameters*pPar_s,int16_t p,int16_t i,int16_t d,
 int16_t t)
@@ -840,4 +828,4 @@ pPar_s->k_d= (int16_t)d/pPar_s->t;
 pPar_s->pPvLast= pPar_s->pPvN;
 }
 
-/*:56*/
+/*:55*/

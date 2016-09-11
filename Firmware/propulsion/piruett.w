@@ -255,7 +255,6 @@ void edgeSelect(inputStruct *);
 void translate(transStruct *);
 void setPwm(int16_t, int16_t);
 void lostSignal(inputStruct *);
-void feedDog(void);
 int16_t scaler(uint16_t input, uint16_t minIn,  uint16_t maxIn,
                                int16_t  minOut, int16_t  maxOut);
 int16_t int16clamp(int16_t value, int16_t min, int16_t max);
@@ -404,8 +403,15 @@ Now that a loop is started, the drive \.{PWM} has its values and we wait in
 Each sucessive loop will finish in the same way.
 After three passes |translation_s| will have good values to work with.
 
-
+First, if we are still in this loop, ensure that the watchdog stays in interrupt
+mode.
 @c
+ # if WATCHDOG
+   WDTCSR |= (1<<WDIE);
+ # else
+   WDTCSR &= ~(1<<WDIE);
+ # endif
+
  sleep_mode();
 
 @
@@ -545,6 +551,7 @@ void pwcCalc(inputStruct *pInput_s)
 This is called by the input capture interrupt vector.
 First, since the receiver is active feed the watchdog timer.
 
+
 Counting always starts on the rising edge and stops on the falling. 
 On the falling edges we can compute the durations using modulus subtraction.
 
@@ -552,7 +559,7 @@ Arrival at the last case establishes that there was a signal and sets mode
 to REMOTE. 
 @c
 
- feedDog();
+ wdt_reset();
 
 
  switch(pInput_s->edge)
@@ -880,25 +887,6 @@ void larboardDirection(int8_t state)
   else
     PORTD |= (1<<PORTD3);
 
-@/}@/
-
-
-
-@
-Here is a simple procedure to reset the watchdog timer.
-Included here is setting ./{WDIE} so that it stays in interrupt mode.
-If this isn't done the next timeout will reset it.
-@c
-void feedDog(void)
-@/{@/
-
-  wdt_reset();
-
- # if WATCHDOG
-   WDTCSR |= (1<<WDIE);
- # else
-   WDTCSR &= ~(1<<WDIE);
- # endif
 @/}@/
 
 
