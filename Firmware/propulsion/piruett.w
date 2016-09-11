@@ -150,6 +150,7 @@ older word ``larboard''.
 @d CH1FALL 1   // The falling edge of RC's remote channel 1
 @d CH2RISE 2   // The rising edge of RC's remote channel 2
 @d CH2FALL 3   // The falling edge of RC's remote channel 2
+@d ALLOWPRESSURE 4  // Period to allow pressure check
 @d MAX_DUTYCYCLE 98 // 98\% to support charge pump of bridge-driver
 @d OFF 0  // The mode of being surfaced
 @d REMOTE 1  // The mode of being surfaced
@@ -215,7 +216,7 @@ typedef struct {
     uint16_t ch2duration;
     uint8_t  edge;
     uint8_t  controlMode;
-    uint16_t pressure;       // pressure in ADC units
+    uint16_t depth;          // depth in cm
     const uint16_t minIn;    // input, minimum
     const uint16_t maxIn;    // input, maximum
     ddcParameters *pPid_s;
@@ -248,7 +249,7 @@ void relayCntl(int8_t state);
 void ledCntl(int8_t state);
 void larboardDirection(int8_t state);
 void starboardDirection(int8_t state);
-void pressureCalc(inputStruct *);
+void depthCalc(inputStruct *);
 void diveTick(inputStruct *);
 void pwcCalc(inputStruct *);
 void edgeSelect(inputStruct *);
@@ -283,12 +284,10 @@ The Flysky FS-IA6 receiver channels start with a synchronous  rising edge
 so we will start looking for that by setting |edge| to look for a rise on
 channel 1.
 
-Center position of the controller should result in a count of about 2400, hard
-larboard, or forward, with trim may report about 31200 and hard starboard, or
-reverse, with trim reports about 16800.
-
-About $4 \over 5$ of that range are the full swing of the stick, without trim.
-This is from about 17600 and 30400 ticks.
+Center position of the controller should result in a count of about 23392, hard
+About $4 \over 5$ of the range are the full swing of the stick, without trim.
+This is from about 25990 and 41850 ticks. This is when the FlySky is set at
+50 Hz. It seems that the width is scaled by frequency.
 
 |.minIn| |.maxIn| are the endpoints of the normal stick travel.
 The units are raw counts as the Input Capture Register will use.
@@ -329,10 +328,12 @@ inputStruct* pInput_s = &(inputStruct){@/
 
 @
 This is the structure that holds output parameters.
+Track represents the prop-to-prop distance. It should probably be adjusted
+to minimize turn radius. With the Flysky this value is pretty large at 520.
 @c
 transStruct* pTranslation_s = &(transStruct){
     @[@].deadBand = 10,
-    @[@].track = 100 // Represents unit-less prop-to-prop distance 
+    @[@].track = 520 // Represents unit-less prop-to-prop distance 
     };
 
 
@@ -476,7 +477,7 @@ if(pTranslation_s->larboardOut || pTranslation_s->starboardOut)
     ledCntl(ON);
 #endif
 
-#if 1
+#if 0 
 if(pInput_s->ch1duration > 33920) // 25990..33920..41850 throttle
     ledCntl(OFF);
  else
@@ -521,7 +522,7 @@ The \.{ADC} is used to determine depth from pressure.
 
 ISR (ADC_vect)
 @/{@/
- handleIrq = &pressureCalc;
+ handleIrq = &depthCalc;
 @/}@/
 
 @
@@ -582,7 +583,11 @@ to REMOTE.
       case CH2FALL:
          pInput_s->ch2fall = ICR1;
          pInput_s->ch2duration = pInput_s->ch2fall - pInput_s->ch2rise;
+         pInput_s->edge = ALLOWPRESSURE;
+       break;
+      case ALLOWPRESSURE:
          pInput_s->edge = CH1RISE;
+
 
          if(pInput_s->controlMode == OFF) pInput_s->controlMode = REMOTE;
 @t\hskip 1in@>  }
@@ -605,7 +610,7 @@ void lostSignal(inputStruct *pInput_s)
 
 @
 This procedure  will count off ticks for a $1\over 4$ second event.
-Every tick it will setup ADC to get pressure sensor values during idle.
+Every tick it will  setup ADC to get pressure sensor values during idle.
 
 @c
 void diveTick(inputStruct *pInput_s)
@@ -613,7 +618,7 @@ void diveTick(inputStruct *pInput_s)
 static uint8_t tickCount = 0;
 
 // We are here 64 times per second
-if (pInput_s->edge == CH1RISE) // While timing isn't too critical
+if (pInput_s->edge == ALLOWPRESSURE)
    {
     ADCSRA |= (1<<ADEN); // Connect the MUX to the ADC and enable it
     ADMUX = (ADMUX & 0xf0)|2U; // Set MUX to channel 2
@@ -643,9 +648,27 @@ That size is efficient since the division is a binary right shift of 5 places.
 Since the \.{ADC} is a mere 10 bits, and $2^{10} \times 32$ is only $2^{15}$,
 the sum may safely be of size |uint16_t|.
 
+Next, this must be in terms of depth.
+The sensor was tested and has a 0.49 V output at the surface and that output
+increases 12~mV/centimeter.
+
+By measurement of the sensor's output, 1000 units of ADC is 4.14~Volts
+or 0.00414~mV/unit.
+Offset is then $0.49 \over 0.00414$ for 118 units.
+That's 118 ADC units at the surface.
+
+Gain is $0.00414 \over 0.012$ for 0.345.
+Since $0.345$ is a floating point, and we don want slow, massive libraries,
+we can multiply this by $2^5$, and round it, for a gain of 11.
+Depth will then be in a large integer of $1 \over 32$~cm.
+Then we will just need to right-shift that big number by 5 places to get
+to integer centimeters.
+
 @c
-void pressureCalc(inputStruct *pInput_s)
+void depthCalc(inputStruct *pInput_s)
         @/{@/
+         const  uint16_t offset = 118; //units of ADC offset from zero depth
+         const  uint16_t gain = 11;    //units of gain in 1/32 cm per ADC unit
          static uint16_t buffStart[1<<5]={0};
          const  uint16_t *buffEnd = buffStart+(1<<5)-1;
          static uint16_t *buffIndex = buffStart;
@@ -659,9 +682,9 @@ void pressureCalc(inputStruct *pInput_s)
          sum += *buffIndex; // Include this new item in the sum
          buffIndex = (buffIndex != buffEnd)?buffIndex+1:buffStart;
 
-         pInput_s->pressure = (sum>>5);
-#if 0
-        if(pInput_s->pressure >200)
+         pInput_s->depth = (uint16_t)(((sum>>5)-offset)*gain)>>5;
+#if 1
+        if(pInput_s->depth > 100)
             ledCntl(OFF);
          else
             ledCntl(ON);
