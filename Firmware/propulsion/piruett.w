@@ -404,9 +404,8 @@ Now that a loop is started, the drive \.{PWM} has its values and we wait in
 Each sucessive loop will finish in the same way.
 After three passes |translation_s| will have good values to work with.
 
+
 @c
-  // if we are here, all is well.
- feedDog();
  sleep_mode();
 
 @
@@ -543,12 +542,18 @@ of the $2^{16}$~counts of the 16~bit register.
 void pwcCalc(inputStruct *pInput_s)
 @/{@/
 @
+This is called by the input capture interrupt vector.
+First, since the receiver is active feed the watchdog timer.
+
 Counting always starts on the rising edge and stops on the falling. 
 On the falling edges we can compute the durations using modulus subtraction.
 
 Arrival at the last case establishes that there was a signal and sets mode 
 to REMOTE. 
 @c
+
+ feedDog();
+
 
  switch(pInput_s->edge)
 
