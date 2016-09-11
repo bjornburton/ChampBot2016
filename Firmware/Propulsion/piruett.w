@@ -207,9 +207,10 @@ Rise and Fall indicate the \.{PWC} edge times.
 
 @<Types...@>=
 typedef struct {
+    uint16_t ch1rise;
+    uint16_t ch1fall;
     uint16_t ch2rise;
     uint16_t ch2fall;
-    uint16_t ch1fall;
     uint16_t ch1duration;
     uint16_t ch2duration;
     uint8_t  edge;
@@ -300,8 +301,8 @@ Until we have collected the edges we will assume there is no signal.
 @c
 
 
-const uint16_t minIn = 17600U; // minimum normal value from receiver
-const uint16_t maxIn = 30400U; // maximum normal value from receiver
+const uint16_t minIn = 25990U; // minimum normal value from receiver
+const uint16_t maxIn = 41850U; // maximum normal value from receiver
 const int16_t minOut = INT8_MIN;  // minimum value of thrust
 const int16_t maxOut = INT8_MAX;  // maximum value of thrust
 
@@ -312,7 +313,7 @@ defaults. |takDdcSetPid()| is used to set the
 parameters.
 @c
 inputStruct* pInput_s = &(inputStruct){@/
-    @[@].edge = CH2RISE,@/
+    @[@].edge = CH1RISE,@/
     @[@].controlMode = OFF,@/
     @[@].pPid_s  = &(ddcParameters){@/
         @t\hskip 1in@> @[@] .k_p = 1,@/
@@ -434,7 +435,6 @@ Here we scale the \.{PWC} durations and apply the ``deadBand''.
 
  if (pInput_s->controlMode != OFF)
     {
-     // Apply scaler
      outputCh1 = scaler(pInput_s->ch1duration, minIn, maxIn, minOut, maxOut);
      outputCh2 = scaler(pInput_s->ch2duration, minIn, maxIn, minOut, maxOut);
     }
@@ -464,8 +464,15 @@ if (pInput_s->controlMode == REMOTE)
 The LED is used to indicate when both channels PWM's are zeros.
 @c
 
-#if 1 
+#if 0
 if(pTranslation_s->larboardOut || pTranslation_s->starboardOut)
+    ledCntl(OFF);
+ else
+    ledCntl(ON);
+#endif
+
+#if 1
+if(pInput_s->ch1duration > 33920) // 25990..33920..41850 throttle
     ledCntl(OFF);
  else
     ledCntl(ON);
@@ -538,15 +545,24 @@ void pwcCalc(inputStruct *pInput_s)
 @
 Counting always starts on the rising edge and stops on the falling. 
 On the falling edges we can compute the durations using modulus subtraction.
-Flysky starts .
 
 Arrival at the last case establishes that there was a signal and sets mode 
 to REMOTE. 
 @c
 
-
  switch(pInput_s->edge)
+
      {
+
+      case CH1RISE:
+         pInput_s->ch1rise = ICR1;
+         pInput_s->edge = CH1FALL;
+       break;
+      case CH1FALL:
+         pInput_s->ch1fall = ICR1;
+         pInput_s->ch1duration = pInput_s->ch1fall - pInput_s->ch1rise;
+         pInput_s->edge = CH2RISE;
+       break;
       case CH2RISE:
          pInput_s->ch2rise = ICR1;
          pInput_s->edge = CH2FALL;
@@ -554,28 +570,23 @@ to REMOTE.
       case CH2FALL:
          pInput_s->ch2fall = ICR1;
          pInput_s->ch2duration = pInput_s->ch2fall - pInput_s->ch2rise;
-         pInput_s->edge = CH1FALL;
-       break;
-      case CH1FALL:
-         pInput_s->ch1fall = ICR1;
-         pInput_s->ch1duration = pInput_s->ch1fall - pInput_s->ch2fall;
-         pInput_s->edge = CH2RISE;
+         pInput_s->edge = CH1RISE;
+
          if(pInput_s->controlMode == OFF) pInput_s->controlMode = REMOTE;
 @t\hskip 1in@>  }
-
 edgeSelect(pInput_s);
+
 @/}@/
 
 @
-This procedure sets output to zero in the event of a lost signal.
-Note that \.{WDIE} is reset to 1 so that it remains in interrupt-only mode.
+This procedure sets output to zero and resets edge
+in the event of a lost signal.
 @c
 void lostSignal(inputStruct *pInput_s)
 @/{@/
 
  pInput_s->controlMode = OFF;
- pInput_s->edge = CH2RISE;
-
+ pInput_s->edge = CH1RISE;
  edgeSelect(pInput_s);
 
 @/}@/
@@ -590,7 +601,7 @@ void diveTick(inputStruct *pInput_s)
 static uint8_t tickCount = 0;
 
 // We are here 64 times per second
-if (pInput_s->edge == CH2RISE) // While timing isn't too critical
+if (pInput_s->edge == CH1RISE) // While timing isn't too critical
    {
     ADCSRA |= (1<<ADEN); // Connect the MUX to the ADC and enable it
     ADMUX = (ADMUX & 0xf0)|2U; // Set MUX to channel 2
@@ -652,10 +663,9 @@ the expected edge type from the remote control's proportional signal.
 @c
 void edgeSelect(inputStruct *pInput_s)
     @/{@/
-
    switch(pInput_s->edge)
      {
-   case CH1RISE: // To wait for rising edge on rx-channel 2
+   case CH1RISE: // To wait for rising edge on rx-channel 1
       ADMUX = (ADMUX & 0xf0)|0U;  // Set to mux channel 0
       TCCR1B |= (1<<ICES1);   // Rising edge (23.3.2)
     break;
@@ -672,7 +682,7 @@ void edgeSelect(inputStruct *pInput_s)
       TCCR1B &= ~(1<<ICES1);  // Falling edge (23.3.2)
    }
 @
-Since the edge has been changed, the Input Capture Flag should be cleared.
+Since the edge has now been changed, the Input Capture Flag should be cleared.
 It seems odd but clearing it involves writing a one to it.
 @c
 
@@ -1071,7 +1081,7 @@ Conversion will take about 191~$\mu$s and will complete with an interrupt.
  ADCSRB |= (1<<ACME);  // Conn the MUX to (-) input of comparator (sec 23.2)
 
  // 24.9.5 DIDR0 – Digital Input Disable Register 0
- DIDR0  |= ((1<<ADC2D)|(1<<ADC1D)|(1<<ADC0D)); // Disable din (sec 24.9.5)
+DIDR0  |= ((1<<ADC2D)|(1<<ADC1D)|(1<<ADC0D)); // Disable din (sec 24.9.5)
 
  // 23.3.2 ACSR – Analog Comparator Control and Status Register
  ACSR   |= (1<<ACBG);  // Connect + input to the band-gap ref (sec 23.3.2)
