@@ -129,7 +129,7 @@ older word ``larboard''.
 @ |F_CPU| is used to convey the Trinket Pro clock rate.
 @d F_CPU 16000000UL
 
-@* Boolean definitions.
+@* Boolean definitions used everywhere.
 @d ON 1
 @d OFF 0
 @d SET 1
@@ -144,14 +144,19 @@ older word ``larboard''.
 @d MANUAL 0
 @d STOPPED 0
 
-@* Other definitions. It is critical that |MAX_DUTYCYCLE| is
-98\% or less.
+@* pInput\_s->edge may be any of these.
 @d CH1RISE 0   // The rising edge of RC's remote channel 1
 @d CH1FALL 1   // The falling edge of RC's remote channel 1
 @d CH2RISE 2   // The rising edge of RC's remote channel 2
 @d CH2FALL 3   // The falling edge of RC's remote channel 2
 @d ALLOWPRESSURE 4  // Period to allow pressure check
+
+
+@* Other definitions. It is critical that |MAX_DUTYCYCLE| is
+98\% or less.
 @d MAX_DUTYCYCLE 98 // 98\% to support charge pump of bridge-driver
+
+@* pInput\_s->controlMode may be any of these.
 @d OFF 0  // The mode of being surfaced
 @d REMOTE 1  // The mode of being surfaced
 @d DIVING 2    // The mode of actively diving
@@ -216,7 +221,7 @@ typedef struct {
     uint16_t ch2duration;
     uint8_t  edge;
     uint8_t  controlMode;
-    uint16_t depth;          // depth in cm
+    int16_t depth;           // signed depth in cm
     const uint16_t minIn;    // input, minimum
     const uint16_t maxIn;    // input, maximum
     ddcParameters *pPid_s;
@@ -256,6 +261,7 @@ void edgeSelect(inputStruct *);
 void translate(transStruct *);
 void setPwm(int16_t, int16_t);
 void lostSignal(inputStruct *);
+void thrustCalc(inputStruct *);
 int16_t scaler(uint16_t input, uint16_t minIn,  uint16_t maxIn,
                                int16_t  minOut, int16_t  maxOut);
 int16_t int16clamp(int16_t value, int16_t min, int16_t max);
@@ -279,36 +285,13 @@ void @[@] (*handleIrq)(inputStruct *) = NULL;
 int main(void)
 @/{@/
 
-@
-The Flysky FS-IA6 receiver channels start with a synchronous  rising edge
-so we will start looking for that by setting |edge| to look for a rise on
-channel 1.
-
-Center position of the controller should result in a count of about 23392, hard
-About $4 \over 5$ of the range are the full swing of the stick, without trim.
-This is from about 25990 and 41850 ticks. This is when the FlySky is set at
-50 Hz. It seems that the width is scaled by frequency.
-
-|.minIn| |.maxIn| are the endpoints of the normal stick travel.
-The units are raw counts as the Input Capture Register will use.
-
-At some point a calibration feature could be added which could populate these
-but the numbers here were from trial and error and seem good.
-
-Until we have collected the edges we will assume there is no signal.
-@c
-
-
-const uint16_t minIn = 25990U; // minimum normal value from receiver
-const uint16_t maxIn = 41850U; // maximum normal value from receiver
-const int16_t minOut = INT8_MIN;  // minimum value of thrust
-const int16_t maxOut = INT8_MAX;  // maximum value of thrust
 
 @
 Initially we will have the motors off and wait for the first rising edge
 from the remote. The PID parameters are instantiated and loaded with safe
-defaults. |takDdcSetPid()| is used to set the
-parameters.
+defaults. |takDdcSetPid()| is used to set the parameters.
+
+The setpoint of 100~cm is set here.
 @c
 inputStruct* pInput_s = &(inputStruct){@/
     @[@].edge = CH1RISE,@/
@@ -319,22 +302,13 @@ inputStruct* pInput_s = &(inputStruct){@/
         @t\hskip 1in@>@[@] .k_d = 1,@/
         @t\hskip 1in@>@[@] .t   = 1,@/
         @t\hskip 1in@>@[@]  .m   = 0,@/
+        @t\hskip 1in@>@[@]  .setpoint   = 100,@/
         @t\hskip 1in@>@[@] .mMin = INT16_MIN,@/
         @t\hskip 1in@>@[@] .mMax = INT16_MAX,@/
         @t\hskip 1in@>@[@] .mode = AUTOMATIC@/
         @t\hskip 1in@>}@/
     };
 
-
-@
-This is the structure that holds output parameters.
-Track represents the prop-to-prop distance. It should probably be adjusted
-to minimize turn radius. With the Flysky this value is pretty large at 520.
-@c
-transStruct* pTranslation_s = &(transStruct){
-    @[@].deadBand = 10,
-    @[@].track = 520 // Represents unit-less prop-to-prop distance 
-    };
 
 
 @
@@ -430,59 +404,7 @@ if (handleIrq != NULL)
     handleIrq = NULL;
     }
 
-@
-Here we scale the \.{PWC} durations and apply the ``deadBand''.
-@c
 
-
- {
- int16_t outputCh1;
- int16_t outputCh2;
-
- if (pInput_s->controlMode != OFF)
-    {
-     outputCh1 = scaler(pInput_s->ch1duration, minIn, maxIn, minOut, maxOut);
-     outputCh2 = scaler(pInput_s->ch2duration, minIn, maxIn, minOut, maxOut);
-    }
-  else
-     {
-      outputCh1 = 0;
-      outputCh2 = 0;
-     }
-
-     // Apply deadband`
- outputCh1 = (abs(outputCh1) > pTranslation_s->deadBand)?outputCh1:0;
- outputCh2 = (abs(outputCh2) > pTranslation_s->deadBand)?outputCh2:0;
-
- pTranslation_s->radius = outputCh1;
- pTranslation_s->thrust = outputCh2;
-
- }
-
-translate(pTranslation_s);
-
-if (pInput_s->controlMode == REMOTE)
-  setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
- else
-   setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
-
-@
-The LED is used to indicate when both channels PWM's are zeros.
-@c
-
-#if 0
-if(pTranslation_s->larboardOut || pTranslation_s->starboardOut)
-    ledCntl(OFF);
- else
-    ledCntl(ON);
-#endif
-
-#if 0 
-if(pInput_s->ch1duration > 33920) // 25990..33920..41850 throttle
-    ledCntl(OFF);
- else
-    ledCntl(ON);
-#endif
 @/
   } /* end for */
 @/
@@ -560,38 +482,128 @@ Arrival at the last case establishes that there was a signal and sets mode
 to REMOTE. 
 @c
 
- wdt_reset();
-
 
  switch(pInput_s->edge)
 
      {
-
       case CH1RISE:
          pInput_s->ch1rise = ICR1;
          pInput_s->edge = CH1FALL;
+         wdt_reset();
        break;
       case CH1FALL:
          pInput_s->ch1fall = ICR1;
          pInput_s->ch1duration = pInput_s->ch1fall - pInput_s->ch1rise;
          pInput_s->edge = CH2RISE;
+         wdt_reset();
        break;
       case CH2RISE:
          pInput_s->ch2rise = ICR1;
          pInput_s->edge = CH2FALL;
+         wdt_reset();
        break;
       case CH2FALL:
          pInput_s->ch2fall = ICR1;
          pInput_s->ch2duration = pInput_s->ch2fall - pInput_s->ch2rise;
          pInput_s->edge = ALLOWPRESSURE;
+         if(pInput_s->controlMode == OFF) pInput_s->controlMode = REMOTE;
+         wdt_reset();
        break;
       case ALLOWPRESSURE:
          pInput_s->edge = CH1RISE;
-
-
-         if(pInput_s->controlMode == OFF) pInput_s->controlMode = REMOTE;
 @t\hskip 1in@>  }
 edgeSelect(pInput_s);
+
+
+@
+This procedure connects pwc to pwm.
+@c
+thrustCalc(pInput_s);
+
+@/}@/
+
+void thrustCalc(inputStruct *pInput_s)
+@/{@/
+
+@
+The Flysky FS-IA6 receiver channels start with a synchronous  rising edge
+so we will start looking for that by setting |edge| to look for a rise on
+channel 1.
+
+Center position of the controller should result in a count of about 23392, hard
+About $4 \over 5$ of the range are the full swing of the stick, without trim.
+This is from about 25990 and 41850 ticks. This is when the FlySky is set at
+50 Hz. It seems that the width is scaled by frequency.
+
+|.minIn| |.maxIn| are the endpoints of the normal stick travel.
+The units are raw counts as the Input Capture Register will use.
+
+At some point a calibration feature could be added which could populate these
+but the numbers here were from trial and error and seem good.
+
+Until we have collected the edges we will assume there is no signal.
+@c
+
+
+const uint16_t minIn = 25990U; // minimum normal value from receiver
+const uint16_t maxIn = 41850U; // maximum normal value from receiver
+const int16_t minOut = INT8_MIN;  // minimum value of thrust
+const int16_t maxOut = INT8_MAX;  // maximum value of thrust
+@
+This is the structure that holds output parameters.
+Track represents the prop-to-prop distance. It should probably be adjusted
+to minimize turn radius. With the Flysky this value is pretty large at 520.
+@c
+transStruct* pTranslation_s = &(transStruct){
+    @[@].deadBand = 10,
+    @[@].track = 520 // Represents unit-less prop-to-prop distance 
+    };
+
+@
+Here we scale the \.{PWC} durations and apply the ``deadBand''.
+@c
+
+ {
+ int16_t outputCh1;
+ int16_t outputCh2;
+
+ if (pInput_s->controlMode != OFF)
+    {
+     outputCh1 = scaler(pInput_s->ch1duration, minIn, maxIn, minOut, maxOut);
+     outputCh2 = scaler(pInput_s->ch2duration, minIn, maxIn, minOut, maxOut);
+    }
+  else
+     {
+      outputCh1 = 0;
+      outputCh2 = 0;
+     }
+
+     // Apply deadband`
+ outputCh1 = (abs(outputCh1) > pTranslation_s->deadBand)?outputCh1:0;
+ outputCh2 = (abs(outputCh2) > pTranslation_s->deadBand)?outputCh2:0;
+
+ pTranslation_s->radius = outputCh1;
+ pTranslation_s->thrust = outputCh2;
+
+ }
+
+translate(pTranslation_s);
+
+if (pInput_s->controlMode == REMOTE)
+  setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
+ else
+   setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
+
+@
+The LED is used to indicate when both channels PWM's are zeros.
+@c
+
+#if 0
+if(pTranslation_s->larboardOut || pTranslation_s->starboardOut)
+    ledCntl(OFF);
+ else
+    ledCntl(ON);
+#endif
 
 @/}@/
 
@@ -603,14 +615,18 @@ void lostSignal(inputStruct *pInput_s)
 @/{@/
 
  pInput_s->controlMode = OFF;
- pInput_s->edge = CH1RISE;
- edgeSelect(pInput_s);
-
+ pInput_s->edge = ALLOWPRESSURE;
+ wdt_reset();
 @/}@/
 
 @
 This procedure  will count off ticks for a $1\over 4$ second event.
-Every tick it will  setup ADC to get pressure sensor values during idle.
+Every tick it will  setup ADC to get pressure sensor values during idle or
+sleep.
+
+It will only get the ADC value when ALLOWPRESSURE is true, happening after
+both pwc channels have been read. This it when there is plenty of time and
+it can disturb those time measurement.
 
 @c
 void diveTick(inputStruct *pInput_s)
@@ -640,7 +656,8 @@ if (!(++tickCount)) // Every 256 ticks
 
 @
 This procedure will filter \.{ADC} results for a pressure in terms of \.{ADC}
-units. First the comparator is reconnected to the \.{MUX} so that we miss as
+units and convert that to signed integer depth in centimeters.
+First the comparator is reconnected to the \.{MUX} so that we miss as
 few RC events as possible.
 There is a moving average filter of size 32 or about $1 \over 2$ second in
 size.
@@ -650,29 +667,35 @@ the sum may safely be of size |uint16_t|.
 
 Next, this must be in terms of depth.
 The sensor was tested and has a 0.49 V output at the surface and that output
-increases 12~mV/centimeter.
+increases by 12~mV per centimeter of depth.
 
 By measurement of the sensor's output, 1000 units of ADC is 4.14~Volts
 or 0.00414~mV/unit.
 Offset is then $0.49 \over 0.00414$ for 118 units.
-That's 118 ADC units at the surface.
+That means 118 ADC units at the surface.
 
 Gain is $0.00414 \over 0.012$ for 0.345.
-Since $0.345$ is a floating point, and we don want slow, massive libraries,
-we can multiply this by $2^5$, and round it, for a gain of 11.
+Since $0.345$ is a floating point, and we don't want slow, massive
+floating-point libraries, we can multiply this by $2^5$, and round it, for
+a gain of 11.
 Depth will then be in a large integer of $1 \over 32$~cm.
-Then we will just need to right-shift that big number by 5 places to get
-to integer centimeters.
+Then we will just need to right-shift that big number by 5 places
+(thus dividing by 32) to get to integer centimeters.
+
+Conversion to depth is signed since the offset is fixed and the sensor may
+drift a bit.
+The danger in an unsigned is that when surfaced, the offset subtraction may
+result in an instant extreme, apparent depth. 
 
 @c
 void depthCalc(inputStruct *pInput_s)
         @/{@/
-         const  uint16_t offset = 118; //units of ADC offset from zero depth
-         const  uint16_t gain = 11;    //units of gain in 1/32 cm per ADC unit
+         const  int16_t offset = 118; //units of ADC offset from zero depth
+         const  int16_t gain = 11;    //units of gain in 1/32 cm per ADC unit
          static uint16_t buffStart[1<<5]={0};
          const  uint16_t *buffEnd = buffStart+(1<<5)-1;
          static uint16_t *buffIndex = buffStart;
-         static uint16_t sum; // Accommodates size up to 1<<6 only
+         static uint16_t sum = 0; // Accommodates size up to 1<<6 only
 
          ADCSRA &= ~(1<<ADEN); // Reconnect the MUX to the comparator
          ADMUX = (ADMUX & 0xf0)|1U;  // Set back to MUX channel 1
@@ -682,8 +705,9 @@ void depthCalc(inputStruct *pInput_s)
          sum += *buffIndex; // Include this new item in the sum
          buffIndex = (buffIndex != buffEnd)?buffIndex+1:buffStart;
 
-         pInput_s->depth = (uint16_t)(((sum>>5)-offset)*gain)>>5;
-#if 1
+         pInput_s->depth = (int16_t)(((sum>>5)-offset)*gain)/32;
+
+#if 1 // test one meter
         if(pInput_s->depth > 100)
             ledCntl(OFF);
          else
