@@ -144,7 +144,7 @@ older word ``larboard''.
 @d MANUAL 0
 @d STOPPED 0
 
-@* pInput\_s->edge may be any of these.
+@* pInput\_s$to$edge may be any of these.
 @d CH1RISE 0   // The rising edge of RC's remote channel 1
 @d CH1FALL 1   // The falling edge of RC's remote channel 1
 @d CH2RISE 2   // The rising edge of RC's remote channel 2
@@ -156,12 +156,11 @@ older word ``larboard''.
 98\% or less.
 @d MAX_DUTYCYCLE 98 // 98\% to support charge pump of bridge-driver
 
-@* pInput\_s->controlMode may be any of these.
+@* pInput\_s$\to$controlMode may be any of these.
 @d OFF 0  // The mode of being surfaced
 @d REMOTE 1  // The mode of being surfaced
 @d DIVING 2    // The mode of actively diving
 @d SUBMERGED 3 // The mode of being submerged
-@d PIDSAMPCT 4 // The PID sample count for derivatives
 
 
 @* Interrupt Controls.
@@ -191,6 +190,7 @@ output to start with.
 |min| is the minimum allowed output.
 |max| is the maximum allowed output.
 |mode| can be manual or automatic;
+@d PIDSAMPCT 4 // The PID sample count for derivatives
 @<Types...@>=
 typedef struct {
    int16_t k_p;             // proportional action parameter
@@ -696,10 +696,10 @@ void depthCalc(inputStruct *pInput_s)
          const  uint16_t *buffEnd = buffStart+(1<<5)-1;
          static uint16_t *buffIndex = buffStart;
          static uint16_t sum = 0; // Accommodates size up to 1<<6 only
-
+#if 1
          ADCSRA &= ~(1<<ADEN); // Reconnect the MUX to the comparator
          ADMUX = (ADMUX & 0xf0)|1U;  // Set back to MUX channel 1
-
+#endif
          sum -= *buffIndex; // Remove the oldest item from the sum
          *buffIndex = (uint16_t)ADCW; // Read the whole 16 bit word with ADCW
          sum += *buffIndex; // Include this new item in the sum
@@ -724,6 +724,10 @@ void edgeSelect(inputStruct *pInput_s)
     @/{@/
    switch(pInput_s->edge)
      {
+   case ALLOWPRESSURE:
+      ADCSRA |= (1<<ADEN); // Connect the MUX to the ADC and enable it
+      ADMUX = (ADMUX & 0xf0)|2U; // Set MUX to channel 2
+    break;
    case CH1RISE: // To wait for rising edge on rx-channel 1
       ADMUX = (ADMUX & 0xf0)|0U;  // Set to mux channel 0
       TCCR1B |= (1<<ICES1);   // Rising edge (23.3.2)
@@ -738,6 +742,7 @@ void edgeSelect(inputStruct *pInput_s)
     break;
    case CH2FALL:
       ADMUX = (ADMUX & 0xf0)|1U; // Set to mux channel
+      ADCSRA &= ~(1<<ADEN); // Reconnect the MUX to the comparator
       TCCR1B &= ~(1<<ICES1);  // Falling edge (23.3.2)
    }
 @
