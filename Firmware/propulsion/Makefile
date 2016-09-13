@@ -22,12 +22,12 @@ EFUSE:= efuse:w:0x05:m
 PROGSWFLAGS:= -p $(BOARD)
 CC        := avr-gcc 
 DOT       := dot 
-EGYPT     := egypt 
+EGYPT     := egypt --include-external
 TANGLE    := ctangle
 WEAVE     := cweave
 TEX       := pdftex
 # Must optimize at 0, 1 or g. 2 and s will fail
-CFLAGS    :=  -std=c11 -g -mmcu=$(MCU) -Wall -O1 -pedantic -fdump-rtl-expand
+CFLAGS    :=  -std=c11 -g -mmcu=$(MCU) -Wall -Og -pedantic -fdump-rtl-expand
 CONV      :=avr-objcopy
 CONVFLAGS := -j .text -j .data -O ihex
 LIBS      :=
@@ -61,6 +61,7 @@ $(DOTSRC): $(EGYPTSRC)
 	$(EGYPT) $(EGYPTSRC) |\
         awk '{gsub(/__vector_21/,"ADC_vect");print}' |\
         awk '{gsub(/__vector_10/,"TIMER1_CAPT_vect");print}' |\
+        awk '{gsub(/__vector_7/,"TIMER2_CAPT_vect");print}' |\
         awk '{gsub(/__vector_6/,"WDT_vect");print}' > $(DOTSRC)
 
 $(EGYPTSRC): $(OBJECTS)
