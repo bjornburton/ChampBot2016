@@ -144,30 +144,16 @@ older word ``larboard''.
 @d MANUAL 0
 @d STOPPED 0
 
-@* pInput\_s$to$edge may be any of these.
-@d CH1RISE 0   // The rising edge of RC's remote channel 1
-@d CH1FALL 1   // The falling edge of RC's remote channel 1
-@d CH2RISE 2   // The rising edge of RC's remote channel 2
-@d CH2FALL 3   // The falling edge of RC's remote channel 2
-@d ALLOWPRESSURE 4  // Period to allow pressure check
-
 @* Other definitions. It is critical that |MAX_DUTYCYCLE| is
 98\% or less.
 @d MAX_DUTYCYCLE 98 // 98\% to support charge pump of bridge-driver
 
-@* pInput\_s$\to$controlMode may be any of these.
-@d OFF 0  // The mode of being surfaced
-@d REMOTE 1  // The mode of being surfaced
-@d DIVING 2    // The mode of actively diving
-@d SUBMERGED 3 // The mode of being submerged
 
-
-@* Interrupt Controls.
+@* Interrupt Controls to allow selective development.
 @d WATCHDOG ON // reset and all
 @d ANALOG ON
 @d TICK ON // TIMER2
 @d CAPTURE ON // TIMER1
-
 
 
 @ @<Include...@>=
@@ -205,11 +191,31 @@ typedef struct {
    int8_t  mode;            // 1 == automatic, 0 == manual
    } ddcParameters;
 
-@ Here is a structure type to keep track of the state of
+
+@* pInput\_s$\to$edge may be any of these.
+@<Types...@>=
+typedef enum {
+    CH1RISE,   // The rising edge of RC's remote channel 1
+    CH1FALL,   // The falling edge of RC's remote channel 1
+    CH2RISE,   // The rising edge of RC's remote channel 2
+    CH2FALL,   // The falling edge of RC's remote channel 2
+    ALLOWPRESSURE // Period to allow pressure check
+} edges_t;
+
+
+@* pInput\_s$\to$controlMode may be any of these.
+@<Types...@>=
+typedef enum {
+    IDLE,  // The mode of being surfaced
+    REMOTE,  // The mode of being surfaced
+    DIVING,  // The mode of actively diving
+    SUBMERGED  // The mode of being submerged
+} controlModes_t;
+
+@ Here is the structure type to keep track of the state of
 inputs, e.g. servo timing.
 Rise and Fall indicate the \.{PWC} edge times.
 |edge| is set to the edge type expected for the interrupt.
-
 @<Types...@>=
 typedef struct {
     uint16_t ch1rise;
@@ -218,8 +224,8 @@ typedef struct {
     uint16_t ch2fall;
     uint16_t ch1duration;
     uint16_t ch2duration;
-    uint8_t  edge;
-    uint8_t  controlMode;
+    edges_t  edge;
+    controlModes_t  controlMode;
     int16_t depth;           // signed depth in cm
     const uint16_t minIn;    // input, minimum
     const uint16_t maxIn;    // input, maximum
@@ -231,7 +237,7 @@ typedef struct {
 typedef struct {
     int16_t thrust;         // -255 to 255
     int16_t radius;         // -255 to 255
-    const int16_t track;    //    1 to 255
+    const int16_t track;
     int16_t starboardOut;   // -255 to 255
     int16_t larboardOut;    // -255 to 255
     const int8_t  deadBand; // width of zero in terms of output units
@@ -294,7 +300,7 @@ The setpoint of 100~cm is set here.
 @c
 inputStruct* pInput_s = &(inputStruct){@/
     @[@].edge = CH1RISE,@/
-    @[@].controlMode = OFF,@/
+    @[@].controlMode = IDLE,@/
     @[@].pPid_s  = &(ddcParameters){@/
         @t\hskip 1in@> @[@] .k_p = 1,@/
         @t\hskip 1in@>@[@]  .k_i = 1,@/
@@ -308,7 +314,11 @@ inputStruct* pInput_s = &(inputStruct){@/
         @t\hskip 1in@>}@/
     };
 
+diveStruct* pDive_s = &(diveStruct){@/
+   @[@].diveTime = 0,@/
+   @[@].submergeTime = 0@/
 
+};
 
 @
 Here the interrupts are disabled so that configuring them doesn't set it off.
@@ -449,7 +459,7 @@ ISR (ADC_vect)
 @
 When the watchdog timer expires, this vector is called.
 This is what happens if the remote's transmitter signal is not received.
-It calls a variant of |pwcCalc| that only sets the controlMode to OFF.
+It calls a variant of |pwcCalc| that only sets the controlMode to IDLE.
 @c
 
 ISR (WDT_vect)
@@ -504,7 +514,7 @@ to REMOTE.
          pInput_s->ch2fall = ICR1;
          pInput_s->ch2duration = pInput_s->ch2fall - pInput_s->ch2rise;
          pInput_s->edge = ALLOWPRESSURE;
-         if(pInput_s->controlMode == OFF) pInput_s->controlMode = REMOTE;
+         if(pInput_s->controlMode == IDLE) pInput_s->controlMode = REMOTE;
          wdt_reset();
        break;
       case ALLOWPRESSURE:
@@ -565,7 +575,7 @@ Here we scale the \.{PWC} durations and apply the ``deadBand''.
  int16_t outputCh1;
  int16_t outputCh2;
 
- if (pInput_s->controlMode != OFF)
+ if (pInput_s->controlMode != IDLE)
     {
      outputCh1 = scaler(pInput_s->ch1duration, minIn, maxIn, minOut, maxOut);
      outputCh2 = scaler(pInput_s->ch2duration, minIn, maxIn, minOut, maxOut);
@@ -612,7 +622,7 @@ in the event of a lost signal.
 void lostSignal(inputStruct *pInput_s)
 @/{@/
 
- pInput_s->controlMode = OFF;
+ pInput_s->controlMode = IDLE;
  pInput_s->edge = ALLOWPRESSURE;
  wdt_reset();
 @/}@/
