@@ -151,7 +151,6 @@ older word ``larboard''.
 @d CH2FALL 3   // The falling edge of RC's remote channel 2
 @d ALLOWPRESSURE 4  // Period to allow pressure check
 
-
 @* Other definitions. It is critical that |MAX_DUTYCYCLE| is
 98\% or less.
 @d MAX_DUTYCYCLE 98 // 98\% to support charge pump of bridge-driver
@@ -167,7 +166,7 @@ older word ``larboard''.
 @d WATCHDOG ON // reset and all
 @d ANALOG ON
 @d TICK ON // TIMER2
-@d CAPTURE ON //TIMER1
+@d CAPTURE ON // TIMER1
 
 
 
@@ -484,7 +483,6 @@ to REMOTE.
 
 
  switch(pInput_s->edge)
-
      {
       case CH1RISE:
          pInput_s->ch1rise = ICR1;
@@ -634,12 +632,9 @@ void diveTick(inputStruct *pInput_s)
 static uint8_t tickCount = 0;
 
 // We are here 64 times per second
-if (pInput_s->edge == ALLOWPRESSURE)
-   {
-    ADCSRA |= (1<<ADEN); // Connect the MUX to the ADC and enable it
-    ADMUX = (ADMUX & 0xf0)|2U; // Set MUX to channel 2
-   }
 
+if (pInput_s->edge == ALLOWPRESSURE)
+      edgeSelect(pInput_s);
 
 if (!(++tickCount)) // Every 256 ticks
     {
@@ -648,7 +643,6 @@ if (!(++tickCount)) // Every 256 ticks
          // do the PID stuff here?
          takDdc(pInput_s->pPid_s);
          }
-
     }
 
 @/}@/
@@ -689,23 +683,26 @@ result in an instant extreme, apparent depth.
 
 @c
 void depthCalc(inputStruct *pInput_s)
-        @/{@/
-         const  int16_t offset = 118; //units of ADC offset from zero depth
-         const  int16_t gain = 11;    //units of gain in 1/32 cm per ADC unit
-         static uint16_t buffStart[1<<5]={0};
-         const  uint16_t *buffEnd = buffStart+(1<<5)-1;
-         static uint16_t *buffIndex = buffStart;
-         static uint16_t sum = 0; // Accommodates size up to 1<<6 only
-#if 1
-         ADCSRA &= ~(1<<ADEN); // Reconnect the MUX to the comparator
-         ADMUX = (ADMUX & 0xf0)|1U;  // Set back to MUX channel 1
-#endif
-         sum -= *buffIndex; // Remove the oldest item from the sum
-         *buffIndex = (uint16_t)ADCW; // Read the whole 16 bit word with ADCW
-         sum += *buffIndex; // Include this new item in the sum
-         buffIndex = (buffIndex != buffEnd)?buffIndex+1:buffStart;
+    @/{@/
+ const  int16_t offset = 118; //units of ADC offset from zero depth
+ const  int16_t gain = 11;    //units of gain in 1/32 cm per ADC unit
+ static uint16_t buffStart[1<<5]={0};
+ const  uint16_t *buffEnd = buffStart+(1<<5)-1;
+ static uint16_t *buffIndex = buffStart;
+ static uint16_t sum = 0; // Accommodates size up to 1<<6 only
 
-         pInput_s->depth = (int16_t)(((sum>>5)-offset)*gain)/32;
+@
+Now that we have our sample, pass control back to the input capture interrupt.
+@c
+ ADCSRA &= ~(1<<ADEN); // Reconnect the MUX to the comparator
+ ADMUX = (ADMUX & 0xf0)|1U;  // Set to mux channel 1
+
+ sum -= *buffIndex; // Remove the oldest item from the sum
+ *buffIndex = (uint16_t)ADCW; // Read the whole 16 bit word with ADCW
+ sum += *buffIndex; // Include this new item in the sum
+ buffIndex = (buffIndex != buffEnd)?buffIndex+1:buffStart;
+
+ pInput_s->depth = (int16_t)(((sum>>5)-offset)*gain)/32;
 
 #if 1 // test one meter
         if(pInput_s->depth > 100)
@@ -713,7 +710,7 @@ void depthCalc(inputStruct *pInput_s)
          else
             ledCntl(ON);
 #endif
-        @/}@/
+ @/}@/
 
 @
 The procedure edgeSelect configures the ``Input Capture'' unit to capture on
@@ -727,7 +724,7 @@ void edgeSelect(inputStruct *pInput_s)
    case ALLOWPRESSURE:
       ADCSRA |= (1<<ADEN); // Connect the MUX to the ADC and enable it
       ADMUX = (ADMUX & 0xf0)|2U; // Set MUX to channel 2
-    break;
+    return; // no need to stick around
    case CH1RISE: // To wait for rising edge on rx-channel 1
       ADMUX = (ADMUX & 0xf0)|0U;  // Set to mux channel 0
       TCCR1B |= (1<<ICES1);   // Rising edge (23.3.2)
@@ -753,8 +750,6 @@ It seems odd but clearing it involves writing a one to it.
  TIFR1 |= (1<<ICF1); /* (per 16.6.3) */
 @/}@/
 
-
-@
 
 @
 The scaler function takes an input, in time, from the Input Capture
@@ -785,7 +780,7 @@ If it's not that simple, then compute the gain and offset and then continue in
 the usual way.
 This is not really an efficient method, recomputing gain and offset every time
 but we are not in a rush and it makes it easier since, if something changes,
-I don't have to manualy compute and enter these value. OK, maybe I could use
+I don't have to manualy compute and enter these values. OK, maybe I could use
 the preprocessor but compiler optimization probably makes this pretty good.
 
 The constant |ampFact| amplifies values for math to take advantage of
