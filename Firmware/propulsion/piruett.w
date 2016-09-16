@@ -646,7 +646,7 @@ static uint8_t tickCount = 0;
 if (pInput_s->edge == ALLOWPRESSURE)
       edgeSelect(pInput_s);
 
-if (!(++tickCount)) // Every 256 ticks
+if (!(tickCount+=64/4)) // Every 16 ticks or 1/4 sec
     {
      if (pInput_s->controlMode >= DIVING)
         {
@@ -714,7 +714,7 @@ Now that we have our sample, pass control back to the input capture interrupt.
 
  pInput_s->depth = (int16_t)(((sum>>5)-offset)*gain)/32;
 
-#if 1 // test one meter
+#if 0 // test one meter
         if(pInput_s->depth > 100)
             ledCntl(OFF);
          else
@@ -1156,33 +1156,32 @@ DIDR0  |= ((1<<ADC2D)|(1<<ADC1D)|(1<<ADC0D)); // Disable din (sec 24.9.5)
 @
 For a timer tick at each $1\over 4$ second. We will use timer counter 2, our
 last timer.
-It only has an 8 bit prescaler so it will be too fast and will need to be
-divided---a lot.
-The prescaler is set to it's maximum of 1024.
+This 8 bit timer only has a 10 bit prescaler so it will need to be divided
+a lot.
+The prescaler is set to it's maximum of 1024 for 15625 Hz from the 16 Mhz
+clock.
 The timer is set to \.{CTC} mode so that the time loop is trimmable.
-That will be pretty fast so we need more division in software.
-We want to divide by a power of two so we can use a simple compare, and no
-counter resets.
-A divisor of 256 looks perfect, since it is as small as we can go and
-still fit the ticks in the small 8 bit timer.
-The time is trimmed to make 256 passes close to 0.25 seconds by loading compare
+In software, we want to divide by a power of two so we can use a simple
+compare and, here in this timer, no counter resets.
+
+We ultimatly need a divisor of $15625 \over 4$ or 3906. 
+A divisor of 256 is possible in the counter.
+$3906.2/256$ is very near a power of 2, specificaly 16.
+$3906.2$ is 244.14, and, according to the datasheet, it interupts one count past that.
+The time is trimmed to make 16 passes very to 0.25 seconds by loading compare
 register, \.{OCR2A}, with 243. The interval, with the software
 divisor, is
 $f={f_{CPU}\over{divisor \times prescale \times(1+register_{compare})}}$
  or
-${16\times10^6\over{256 \times 1024 \times(1+243)}}\approx 0.25 seconds$.
+${16\times 16^6\over{256 \times 1024 \times(1+243)}}\approx 0.25 seconds$.
 The interrupt is enabled \.{TIMSK2} for output compare register |A|.
-With all that we will have interrupt \.{TIMER2} \.{COMPA} fire every 31 ms.
-For the software division we will increment an uint8\_t in the handler on each
-pass and do something at both 0 and 128.
-The test could look a bit like |"!(++tickCount \& ~|divisor|U)"| except at
-256; but we are at 256 so |"!(++tickCount)"| will do.
-
+With all that we will have interrupt \.{TIMER2} \.{COMPA} fire every
+15.616  ms.
 @ @<Initialize tick timer...@>=
 {
 TCCR2B |= (1<<CS22) | (1<<CS21) | (1<<CS20); // maximum prescale (see 18.11.2)
 TCCR2A |= (1<<WGM21); // CTC mode (see 18.11.1)
-OCR2A = 243U; // Do I need to make this clearer?
+OCR2A = 243U; 
 # if TICK
  TIMSK2 |= (1<<OCIE2A); // Interrupt on a compare match
 # endif
