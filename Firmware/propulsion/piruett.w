@@ -22,6 +22,7 @@ The action will be similar to driving an \.{RC} car or boat.
 By keeping it natural, it should be easier to navigate the course than with a
 skid-steer style control.
 
+For PWM we are using Timer Counter 0.
 We are using the Wingxing \.{DBH-01 (B/C)} and the Inputs are unique on this.
 The \.{PWM} logic input goes to two different pins, depending on direction!
 The non-\.{PWM} pin must be held low.
@@ -45,8 +46,8 @@ direction.
 The remaining, non-\.{PWM} pin, is held low.
 
 
-\.{OC0A} and \.{OC0B} is on pins 5 and 6  (\.{PD8} and \.{PD6}) and are the
-\.{PWM}. A fail-safe relay output will be at pin 8 (\.{PB0}).
+\.{PWM} is \.{OC0B} and \.{OC0A} (\.{PD5} and \.{PD6}), located on Trinket pins 5 an 6.
+The A fail-safe relay output will be at pin 8 (\.{PB0}).
 
 
 For 2016 an autonomous dive function has been added. As in 2015, dive is
@@ -59,8 +60,10 @@ ADC.
 By program, it will maintain this depth for 12 seconds,
 two seconds longer than required.
 
+This timing is through a tick interrupt by Timer Counter 2.
 
-
+Dive is initiated by a low signal on FTDI pin \#4. A relay circuit across
+FTDI \#4 and \#1 (Gnd) will do this. 
 
 @** Implementation.
 The Flysky FS-IA6 receiver has six \.{PWC} channels.
@@ -224,6 +227,7 @@ typedef struct {
     uint16_t ch2fall;
     uint16_t ch1duration;
     uint16_t ch2duration;
+    uint8_t  stopped; // boolean TRUE or FALSE
     edges_t  edge;
     controlModes_t  controlMode;
     int16_t depth;           // signed depth in cm
@@ -326,7 +330,8 @@ Here the interrupts are disabled so that configuring them doesn't set it off.
  cli();
 @/
 @<Initialize watchdog timer...@>
-@<Initialize the inputs and capture mode...@>
+@<Initialize capture mode...@>
+@<Initialize pin inputs...@>
 @<Initialize pin outputs...@>
 @<Initialize tick timer...@>
 @/
@@ -481,8 +486,8 @@ void pwcCalc(inputStruct *pInput_s)
 @/{@/
 @
 This is called by the input capture interrupt vector.
-First, since the receiver is active feed the watchdog timer.
-
+If we are diving of submerged there is an early return so that the dive
+cannot be interrupted.
 
 Counting always starts on the rising edge and stops on the falling. 
 On the falling edges we can compute the durations using modulus subtraction.
@@ -491,6 +496,7 @@ Arrival at the last case establishes that there was a signal and sets mode
 to REMOTE. 
 @c
 
+ if (pInput_s->controlMode >= DIVING) return;
 
  switch(pInput_s->edge)
      {
@@ -520,16 +526,17 @@ to REMOTE.
       case ALLOWPRESSURE:
          pInput_s->edge = CH1RISE;
 @t\hskip 1in@>  }
+
 edgeSelect(pInput_s);
 
 
-@
-This procedure connects pwc to pwm.
-@c
 thrustCalc(pInput_s);
 
 @/}@/
 
+@
+This procedure connects pwc to pwm.
+@c
 void thrustCalc(inputStruct *pInput_s)
 @/{@/
 
@@ -600,18 +607,30 @@ translate(pTranslation_s);
 if (pInput_s->controlMode == REMOTE)
   setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
  else
-   setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
+  setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
 
 @
+Here we check if dive is allowed and, if so, the dive signal is checked.
+If that signal is LOW, move to DIVING mode.
 The LED is used to indicate when both channels PWM's are zeros.
 @c
 
-#if 0
 if(pTranslation_s->larboardOut || pTranslation_s->starboardOut)
+   {
+    pInput_s->stopped = FALSE;
+#if 0
     ledCntl(OFF);
- else
-    ledCntl(ON);
 #endif
+   }
+ else
+    {
+     pInput_s->stopped = TRUE;
+#if 0
+     ledCntl(ON);
+#endif
+    }
+
+
 
 @/}@/
 
@@ -621,8 +640,9 @@ in the event of a lost signal.
 @c
 void lostSignal(inputStruct *pInput_s)
 @/{@/
+if (pInput_s->controlMode <=  REMOTE)  pInput_s->controlMode = IDLE;
 
- pInput_s->controlMode = IDLE;
+ 
  pInput_s->edge = ALLOWPRESSURE;
  wdt_reset();
 @/}@/
@@ -639,21 +659,61 @@ it can disturb those time measurement.
 @c
 void diveTick(inputStruct *pInput_s)
 @/{@/
-static uint8_t tickCount = 0;
+const int8_t oneSecond = 64;
+static int8_t tickCount = 0;
+
+const int16_t divingSeconds = 20 * oneSecond;
+static int16_t divingCount = divingSeconds;
+
+const int16_t submersedSeconds = 12 * oneSecond;
+static int16_t submersedCount = submersedSeconds;
 
 // We are here 64 times per second
 
 if (pInput_s->edge == ALLOWPRESSURE)
       edgeSelect(pInput_s);
 
-if (!(tickCount+=64/4)) // Every 16 ticks or 1/4 sec
+if (!(tickCount+=oneSecond/4)) // Every 16 ticks or 1/4 sec
     {
-     if (pInput_s->controlMode >= DIVING)
+     if (pInput_s->controlMode >= DIVING && 0)
         {
          // do the PID stuff here?
          takDdc(pInput_s->pPid_s);
          }
     }
+
+if (pInput_s->stopped == TRUE)
+ {
+  const uint8_t debticks = oneSecond;
+  static uint8_t debcount = debticks;
+  if ((PIND & (1<<PD0)) && debcount < debticks) debcount++;
+  if ((~PIND & (1<<PD0)) && debcount > 0) debcount--;
+  if (!debcount)
+       pInput_s->controlMode = DIVING;
+ }
+
+@
+ These two timers limit the duration of these modes.
+@c
+ divingCount = (pInput_s->controlMode == DIVING)
+               ?divingCount-1:divingSeconds;
+
+ if (divingCount <= 0)
+      pInput_s->controlMode = IDLE;
+
+ submersedCount = (pInput_s->controlMode == SUBMERGED)
+                   ?submersedCount-1:submersedSeconds;
+
+ if (submersedCount <= 0)
+      pInput_s->controlMode = IDLE;
+
+
+#if 1
+if (pInput_s->controlMode == DIVING)
+   ledCntl(ON);
+     else
+   ledCntl(OFF);
+#endif
 
 @/}@/
 
@@ -1104,6 +1164,16 @@ void takDdcSetPid(ddcParameters* pPar_s, int16_t p, int16_t i, int16_t d,
  // larboard and starboard direction outputs
   DDRD |= ((1<<DDD3)|(1<<DDD4)); // Data direction to output (sec 14.3.3)
 
+ // set the dive input port direction; This is pin \#8
+  DDRB |= (1<<DDD0);
+
+@ @<Initialize pin inputs...@>=
+ // set the dive input port direction; This is FTDI pin \#4
+  DDRB &= ~(1<<DDD0);
+ /* set the dive input pull-up */
+  PORTD |= (1<<PORTD0);
+
+
 @ @<Configure to idle on sleep...@>=
 {
   SMCR &= ~((1<<SM2) | (1<<SM1) | (1<<SM0));
@@ -1117,7 +1187,7 @@ data comming from the receiver.
 Default is \.{ICR} on channel 0 but by setting the MUX to channel \.{ADC2} and
 clearing \.{ADEN}, an ADC conversion will occur on the next idle.
 Conversion will take about 191~$\mu$s and will complete with an interrupt.
-@ @<Initialize the inputs and capture mode...@>=
+@ @<Initialize capture mode...@>=
 {
  // ADCSRA – ADC Control and Status Register A
  ADCSRA &= ~(1<<ADEN); // Conn the MUX to (-) input of comparator (sec 23.2)
@@ -1131,7 +1201,7 @@ Conversion will take about 191~$\mu$s and will complete with an interrupt.
  ADCSRB |= (1<<ACME);  // Conn the MUX to (-) input of comparator (sec 23.2)
 
  // 24.9.5 DIDR0 – Digital Input Disable Register 0
-DIDR0  |= ((1<<ADC2D)|(1<<ADC1D)|(1<<ADC0D)); // Disable din (sec 24.9.5)
+ DIDR0  |= ((1<<ADC2D)|(1<<ADC1D)|(1<<ADC0D)); // Disable din (sec 24.9.5)
 
  // 23.3.2 ACSR – Analog Comparator Control and Status Register
  ACSR   |= (1<<ACBG);  // Connect + input to the band-gap ref (sec 23.3.2)
@@ -1206,7 +1276,7 @@ It needs to be long enough to allow for the 0.25 ms autonomous dive loop.
 
 @
 \.{PWM} setup isn't too scary.
-Timer Count 0 is configured for ``Phase Correct'' \.{PWM} which, according to
+Timer Counter 0 is configured for ``Phase Correct'' \.{PWM} which, according to
 the datasheet, is preferred for motor control.
 \.{OC0A} (port) and \.{OC0B} (starboard) are used for \.{PWM}.
 The prescaler is set to clk/8 and with a 16 MHz clock the $f$ is about 3922~Hz.
