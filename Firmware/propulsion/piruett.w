@@ -263,8 +263,8 @@ void translate(transStruct *);
 void setPwm(int16_t, int16_t);
 void lostSignal(inputStruct *);
 void thrustCalc(inputStruct *);
-int16_t scaler(uint16_t input, uint16_t minIn,  uint16_t maxIn,
-                               int16_t  minOut, int16_t  maxOut);
+int32_t scaler(int32_t input, int32_t minIn,  int32_t maxIn,
+                               int32_t  minOut, int32_t  maxOut);
 int16_t int16clamp(int16_t value, int16_t min, int16_t max);
 void takDdcSetPid(ddcParameters*, int16_t p, int16_t i, int16_t d, int16_t t);
 int16_t takDdc(ddcParameters*);
@@ -840,11 +840,11 @@ Register and returns a value scaled by the parameters in structure
 |inputScale_s|. This is used to translate the stick position of the remote into
 terms that we can use.
 @c
-int16_t scaler(uint16_t input,
-               uint16_t minIn,
-               uint16_t maxIn,
-                int16_t minOut,
-                int16_t maxOut)
+int32_t scaler(int32_t input,
+               int32_t minIn,
+               int32_t maxIn,
+               int32_t minOut,
+               int32_t maxOut)
 @/{@/
 @
 First, we can solve for the obvious cases.
@@ -872,11 +872,11 @@ the high bits for precision.
 @c
 const int32_t ampFact = 128L;
 
-int32_t gain = (ampFact*(int32_t)(maxIn-minIn))/(int32_t)(maxOut-minOut);
+int32_t gain = (ampFact*(maxIn-minIn))/(maxOut-minOut);
 
-int32_t offset = ((ampFact*(int32_t)minIn)/gain)-(int32_t)minOut;
+int32_t offset = ((ampFact*minIn)/gain)-minOut;
 
-return (ampFact*(int32_t)input/gain)-offset;
+return (ampFact*input/gain)-offset;
 
 @/}@/
 
