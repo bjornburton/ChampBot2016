@@ -249,14 +249,6 @@ typedef struct {
 
 @ This structure type keeps track of the state of dive and submerge.
 
-@<Types...@>=
-typedef struct {
-    uint16_t diveTime; // 0.25 sec intervals remaining before it gets canceled
-    uint16_t submergeTime; // 0.25 sec intervals remaining at depth
-    int16_t starboardOut;   // -255 to 255
-    int16_t larboardOut;    // -255 to 255
-    } diveStruct;
-
 
 @ @<Prototypes...@>=
 void relayCntl(int8_t state);
@@ -299,7 +291,8 @@ int main(void)
 Initially we will have the motors off and wait for the first rising edge
 from the remote. The PID parameters are instantiated and loaded with safe
 defaults. |takDdcSetPid()| is used to set the parameters.
-
+The output, $m$, is $\pm$ is the range of uint8 and so positive.
+Note also that the maximum duty cycle is used as maximum.
 The setpoint of 100~cm is set here.
 @c
 inputStruct* pInput_s = &(inputStruct){@/
@@ -308,21 +301,19 @@ inputStruct* pInput_s = &(inputStruct){@/
     @[@].pPid_s  = &(ddcParameters){@/
         @t\hskip 1in@> @[@] .k_p = 1,@/
         @t\hskip 1in@>@[@]  .k_i = 1,@/
-        @t\hskip 1in@>@[@] .k_d = 1,@/
-        @t\hskip 1in@>@[@] .t   = 1,@/
+        @t\hskip 1in@>@[@]  .k_d = 1,@/
+        @t\hskip 1in@>@[@]  .t   = 1,@/
         @t\hskip 1in@>@[@]  .m   = 0,@/
         @t\hskip 1in@>@[@]  .setpoint   = 100,@/
-        @t\hskip 1in@>@[@] .mMin = INT16_MIN,@/
-        @t\hskip 1in@>@[@] .mMax = INT16_MAX,@/
-        @t\hskip 1in@>@[@] .mode = AUTOMATIC@/
+        @t\hskip 1in@>@[@]  .mMin = 0,@/
+        @t\hskip 1in@>@[@]  .mMax = UINT16_MAX,@/
+        @t\hskip 1in@>@[@]  .mode = AUTOMATIC@/
         @t\hskip 1in@>}@/
     };
 
-diveStruct* pDive_s = &(diveStruct){@/
-   @[@].diveTime = 0,@/
-   @[@].submergeTime = 0@/
 
-};
+takDdcSetPid(pInput_s->pPid_s, 1, 1, 0, 4);
+
 
 @
 Here the interrupts are disabled so that configuring them doesn't set it off.
@@ -351,7 +342,7 @@ The \.{PWM} is used to control larboard and starboard motors through \.{OC0A}
 
 
 @
-Rather than burning loops, waiting the ballance of 18~ms for something to
+Rather than burning loops, waiting the balance of 18~ms for something to
 happen, the |sleep| mode is used.
 The specific type of sleep is |idle|.
 In idle, execution stops but timers, like the Input Capture Unit and \.{PWM}
@@ -607,7 +598,8 @@ translate(pTranslation_s);
 if (pInput_s->controlMode == REMOTE)
   setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
  else
-  setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
+  setPwm(0, 0);
+
 
 @
 Here we check if dive is allowed and, if so, the dive signal is checked.
@@ -641,46 +633,67 @@ in the event of a lost signal.
 void lostSignal(inputStruct *pInput_s)
 @/{@/
 if (pInput_s->controlMode <=  REMOTE)  pInput_s->controlMode = IDLE;
+if (pInput_s->controlMode ==  IDLE)  setPwm(0,0);
 
- 
  pInput_s->edge = ALLOWPRESSURE;
  wdt_reset();
 @/}@/
 
 @
-This procedure  will count off ticks for a $1\over 4$ second event.
-Every tick it will  setup ADC to get pressure sensor values during idle or
-sleep.
+This procedure maintains various timers.
 
-It will only get the ADC value when ALLOWPRESSURE is true, happening after
-both pwc channels have been read. This it when there is plenty of time and
-it can disturb those time measurement.
 
 @c
 void diveTick(inputStruct *pInput_s)
 @/{@/
-const int8_t oneSecond = 64;
-static int8_t tickCount = 0;
+const uint8_t oneSecond = 64;
+static uint8_t tickCount = 0;
 
-const int16_t divingSeconds = 20 * oneSecond;
-static int16_t divingCount = divingSeconds;
+const uint16_t divingSeconds = 5 * oneSecond;
+static uint16_t divingCount = divingSeconds;
 
-const int16_t submersedSeconds = 12 * oneSecond;
-static int16_t submersedCount = submersedSeconds;
+const uint16_t submersedSeconds = 60 * oneSecond;
+static uint16_t submersedCount = submersedSeconds;
 
-// We are here 64 times per second
+@
+We are here 64 times per second through the tick interrupt.
+First, if a pressure reading is allowed,
+use edgeSelect to set up for a reading.
+It will only get the ADC value when ALLOWPRESSURE is true, happening after
+both pwc channels have been read.
+@c
 
-if (pInput_s->edge == ALLOWPRESSURE)
-      edgeSelect(pInput_s);
+if (pInput_s->edge == ALLOWPRESSURE) edgeSelect(pInput_s);
 
-if (!(tickCount+=oneSecond/4)) // Every 16 ticks or 1/4 sec
+@
+This will count off ticks for a $1\over 4$ second event.
+This is the ddc crunch interval.
+
+@c
+
+if (!(tickCount+=oneSecond/4))
     {
-     if (pInput_s->controlMode >= DIVING && 0)
+     *pInput_s->pPid_s->pPvLast = pInput_s->depth;
+     (takDdc(pInput_s->pPid_s));
+
+     if (pInput_s->controlMode >= DIVING)
         {
-         // do the PID stuff here?
-         takDdc(pInput_s->pPid_s);
+         pInput_s->pPid_s->mode = AUTOMATIC;
+         int16_t output = scaler(pInput_s->pPid_s->m,
+                                 0,UINT16_MAX,
+                                 0,(MAX_DUTYCYCLE * UINT8_MAX)/100);
+         setPwm(output, output);
+
+         if (*pInput_s->pPid_s->pPvLast >= 100)
+            pInput_s->controlMode = SUBMERGED;
+         }
+       else // To ensure output is safe when it enters DIVING mode
+         {
+          pInput_s->pPid_s->m = 0;
          }
     }
+
+
 
 if (pInput_s->stopped == TRUE)
  {
@@ -698,13 +711,13 @@ if (pInput_s->stopped == TRUE)
  divingCount = (pInput_s->controlMode == DIVING)
                ?divingCount-1:divingSeconds;
 
- if (divingCount <= 0)
+ if (divingCount == 0)
       pInput_s->controlMode = IDLE;
 
  submersedCount = (pInput_s->controlMode == SUBMERGED)
                    ?submersedCount-1:submersedSeconds;
 
- if (submersedCount <= 0)
+ if (submersedCount == 0)
       pInput_s->controlMode = IDLE;
 
 
@@ -756,8 +769,8 @@ void depthCalc(inputStruct *pInput_s)
     @/{@/
  const  int16_t offset = 118; //units of ADC offset from zero depth
  const  int16_t gain = 11;    //units of gain in 1/32 cm per ADC unit
- static uint16_t buffStart[1<<5]={0};
- const  uint16_t *buffEnd = buffStart+(1<<5)-1;
+ static uint16_t buffStart[1<<4]={0};
+ const  uint16_t *buffEnd = buffStart+(1<<4)-1;
  static uint16_t *buffIndex = buffStart;
  static uint16_t sum = 0; // Accommodates size up to 1<<6 only
 
@@ -941,6 +954,7 @@ For starboard, piruett is reversed, making it rotate counter to larboard.
 
 @
 This procedure sets the signal to the H-Bridge.
+Forward is positive an negative is reverse.
 For the \.{PWM} we load the value into the unsigned registers.
 @c
 void setPwm(int16_t larboardOut, int16_t starboardOut)
@@ -1028,7 +1042,8 @@ int16_t int16clamp(int16_t value, int16_t min, int16_t max)
 @/}@/
 
 @
-This is the PID algorithm for the dive control.
+This is the DDC or Direct Digital Control algorithm for the dive control.
+
 It is largely based on an algorithm from the book
 {\it Control and Dynamic Systems} by Yasundo Takahashi, et al.\ (1970).
 This is a nice, easy to compute iterative (velocity) algorithm.
@@ -1085,7 +1100,8 @@ integral and process's derivative.
 Finally, the running output is clamped to the limits,
 which could be the limits of the integer's type, or something smaller.
 
-This function should be called whenever a fresh process variable has been
+A safe value should be written to $m$ before starting control.
+This function should be called after a fresh process variable has been
 written to |pPvLast|.
 
 @c
@@ -1238,7 +1254,7 @@ We ultimatly need a divisor of $15625 \over 4$ or 3906.
 A divisor of 256 is possible in the counter.
 $3906.2/256$ is very near a power of 2, specificaly 16.
 $3906.2$ is 244.14, and, according to the datasheet, it interupts one count past that.
-The time is trimmed to make 16 passes very to 0.25 seconds by loading compare
+The time is trimmed to make 16 passes close to 0.25 seconds by loading compare
 register, \.{OCR2A}, with 243. The interval, with the software
 divisor, is
 $f={f_{CPU}\over{divisor \times prescale \times(1+register_{compare})}}$
@@ -1262,7 +1278,6 @@ OCR2A = 243U;
 See section 11.8 in the datasheet for details on the Watchdog Timer.
 This is in the ``Interrupt Mode'' through \.{WDIE}.
 When controlled remotly or in an autonomous dive this should not time-out.
-It needs to be long enough to allow for the 0.25 ms autonomous dive loop.
 
 @ @<Initialize watchdog timer...@>=
 {
