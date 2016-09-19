@@ -265,7 +265,7 @@ void lostSignal(inputStruct *);
 void thrustCalc(inputStruct *);
 int32_t scaler(int32_t input, int32_t minIn,  int32_t maxIn,
                                int32_t  minOut, int32_t  maxOut);
-int16_t int16clamp(int16_t value, int16_t min, int16_t max);
+int32_t int32clamp(int32_t value, int32_t min, int32_t max);
 void takDdcSetPid(ddcParameters*, int16_t p, int16_t i, int16_t d, int16_t t);
 int16_t takDdc(ddcParameters*);
 
@@ -305,14 +305,14 @@ inputStruct* pInput_s = &(inputStruct){@/
         @t\hskip 1in@>@[@]  .t   = 1,@/
         @t\hskip 1in@>@[@]  .m   = 0,@/
         @t\hskip 1in@>@[@]  .setpoint   = 100,@/
-        @t\hskip 1in@>@[@]  .mMin = 0,@/
-        @t\hskip 1in@>@[@]  .mMax = UINT16_MAX,@/
+        @t\hskip 1in@>@[@]  .mMin = -10000L,@/
+        @t\hskip 1in@>@[@]  .mMax = 10000L,@/
         @t\hskip 1in@>@[@]  .mode = AUTOMATIC@/
         @t\hskip 1in@>}@/
     };
 
 
-takDdcSetPid(pInput_s->pPid_s, 1, 1, 0, 4);
+takDdcSetPid(pInput_s->pPid_s, 20, 2, 2, 1);
 
 
 @
@@ -597,8 +597,6 @@ translate(pTranslation_s);
 
 if (pInput_s->controlMode == REMOTE)
   setPwm(pTranslation_s->larboardOut, pTranslation_s->starboardOut);
- else
-  setPwm(0, 0);
 
 
 @
@@ -649,11 +647,12 @@ void diveTick(inputStruct *pInput_s)
 const uint8_t oneSecond = 64;
 static uint8_t tickCount = 0;
 
-const uint16_t divingSeconds = 5 * oneSecond;
+const uint16_t divingSeconds = 20 * oneSecond;
 static uint16_t divingCount = divingSeconds;
 
-const uint16_t submersedSeconds = 60 * oneSecond;
+const uint16_t submersedSeconds = 12 * oneSecond;
 static uint16_t submersedCount = submersedSeconds;
+
 
 @
 We are here 64 times per second through the tick interrupt.
@@ -667,34 +666,37 @@ if (pInput_s->edge == ALLOWPRESSURE) edgeSelect(pInput_s);
 
 @
 This will count off ticks for a $1\over 4$ second event.
-This is the ddc crunch interval.
-
+This is the Direct Digital Control crunch interval.
+Every interval the depth is collected and DDC is run so that it is always
+ready to take the reins.
 @c
 
-if (!(tickCount+=oneSecond/4))
+if (!(tickCount+=oneSecond / 4))
     {
      *pInput_s->pPid_s->pPvLast = pInput_s->depth;
-     (takDdc(pInput_s->pPid_s));
+     takDdc(pInput_s->pPid_s);
 
      if (pInput_s->controlMode >= DIVING)
         {
-         pInput_s->pPid_s->mode = AUTOMATIC;
-         int16_t output = scaler(pInput_s->pPid_s->m,
-                                 0,UINT16_MAX,
-                                 0,(MAX_DUTYCYCLE * UINT8_MAX)/100);
+         int16_t output = scaler(-(pInput_s->pPid_s->m),
+                           pInput_s->pPid_s->mMin,
+                           pInput_s->pPid_s->mMax,
+                           -(MAX_DUTYCYCLE * UINT8_MAX) / 100L,
+                           0L );
+
          setPwm(output, output);
 
-         if (*pInput_s->pPid_s->pPvLast >= 100)
+         if (*pInput_s->pPid_s->pPvLast >= 95L) // Being within 5 cm is fine
             pInput_s->controlMode = SUBMERGED;
          }
        else // To ensure output is safe when it enters DIVING mode
          {
-          pInput_s->pPid_s->m = 0;
+          pInput_s->pPid_s->m = 0L;
          }
     }
 
 
-
+// Debounce the dive start
 if (pInput_s->stopped == TRUE)
  {
   const uint8_t debticks = oneSecond;
@@ -721,8 +723,8 @@ if (pInput_s->stopped == TRUE)
       pInput_s->controlMode = IDLE;
 
 
-#if 1
-if (pInput_s->controlMode == DIVING)
+#if 0
+if (pInput_s->controlMode >= DIVING)
    ledCntl(ON);
      else
    ledCntl(OFF);
@@ -787,7 +789,8 @@ Now that we have our sample, pass control back to the input capture interrupt.
 
  pInput_s->depth = (int16_t)(((sum>>5)-offset)*gain)/32;
 
-#if 0 // test one meter
+#if 1
+        // test one meter
         if(pInput_s->depth > 100)
             ledCntl(OFF);
          else
@@ -934,19 +937,19 @@ This is partly for noise immunity and partly to help avoid collisions.
 @c
  if(trans_s->thrust != STOPPED && lock == OFF)
    {
-    trans_s->larboardOut = int16clamp(speed-rotation, -max, max);
-    trans_s->starboardOut = int16clamp(speed+rotation, -max, max);
+    trans_s->larboardOut = int32clamp(speed-rotation, -max, max);
+    trans_s->starboardOut = int32clamp(speed+rotation, -max, max);
     }
   else /* piruett mode */
    {
     lock = (abs(piruett) > pirLockLevel)?ON:OFF;
 
-    trans_s->larboardOut = int16clamp(piruett, -max, max);
+    trans_s->larboardOut = int32clamp(piruett, -max, max);
 @
 For starboard, piruett is reversed, making it rotate counter to larboard.
 @c
     piruett = -piruett;
-    trans_s->starboardOut = int16clamp(piruett, -max, max);
+    trans_s->starboardOut = int32clamp(piruett, -max, max);
     }
 @/}@/
 
@@ -956,6 +959,7 @@ For starboard, piruett is reversed, making it rotate counter to larboard.
 This procedure sets the signal to the H-Bridge.
 Forward is positive an negative is reverse.
 For the \.{PWM} we load the value into the unsigned registers.
+There is no duty-cycle limit here.
 @c
 void setPwm(int16_t larboardOut, int16_t starboardOut)
 @/{@/
@@ -1034,9 +1038,9 @@ void starboardDirection(int8_t state)
 @/}@/
 
 @
-A simple 16 bit clamp function.
+A simple 32 bit clamp function.
 @c
-int16_t int16clamp(int16_t value, int16_t min, int16_t max)
+int32_t int32clamp(int32_t value, int32_t min, int32_t max)
 @/{@/
  return (value > max)?max:(value < min)?min:value;
 @/}@/
@@ -1119,6 +1123,7 @@ _Static_assert(sizeof(derCoef)/sizeof(derCoef[0]) == PIDSAMPCT,
 _Static_assert(sizeof(secDerCoef)/sizeof(secDerCoef[0]) == PIDSAMPCT,
               "PID sample mismatch");
 
+int32_t total;
 uint8_t offset = pPar_s->pPvLast - pPar_s->pPvN;
 
 pPar_s->pPvLast = pPar_s->pPvN + (++offset%PIDSAMPCT);
@@ -1130,20 +1135,22 @@ pPar_s->pPvLast = pPar_s->pPvN + (++offset%PIDSAMPCT);
    {
     int16_t dDer=0, dSecDer=0;
 
-    for(int8_t coIdx = 0;coIdx < PIDSAMPCT;coIdx++)
+    for(int8_t coefIdx = 0;coefIdx < PIDSAMPCT;coefIdx++)
          {
-          dDer += derCoef[coIdx] * pPar_s->pPvN[offset%PIDSAMPCT];
-          dSecDer += secDerCoef[coIdx] * pPar_s->pPvN[offset%PIDSAMPCT];
+          dDer += derCoef[coefIdx] * pPar_s->pPvN[offset%PIDSAMPCT];
+          dSecDer += secDerCoef[coefIdx] * pPar_s->pPvN[offset%PIDSAMPCT];
           offset++;
          }
+
+    // Since the derivative was in sixths we must divide by six
     dDer /= 6;
-             // since the derivative was in sixths we must divide by six
 
     int16_t err = pPar_s->setpoint - *pPar_s->pPvLast;
 
-    pPar_s->m += pPar_s->k_p*(dDer + pPar_s->k_i*err - pPar_s->k_d*dSecDer);
 
-    pPar_s->m = int16clamp(pPar_s->m, pPar_s->mMin, pPar_s->mMax);
+    total = pPar_s->k_p*(dDer + pPar_s->k_i*err - pPar_s->k_d*dSecDer);
+
+    pPar_s->m = int32clamp( (pPar_s->m + total), pPar_s->mMin, pPar_s->mMax);
    }
 
 
