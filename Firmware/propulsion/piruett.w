@@ -559,12 +559,13 @@ const int16_t minOut = INT8_MIN;  // minimum value of thrust
 const int16_t maxOut = INT8_MAX;  // maximum value of thrust
 @
 This is the structure that holds output parameters.
-Track represents the prop-to-prop distance. It should probably be adjusted
-to minimize turn radius. With the Flysky this value is pretty large at 520.
+Track represents the prop-to-prop distance.
+The units really don't mean anything physical.
+It should probably be adjusted to minimize turn radius. With the Flysky this value is pretty large at 520.
 @c
 transStruct* pTranslation_s = &(transStruct){
     @[@].deadBand = 10,
-    @[@].track = 520 // Represents unit-less prop-to-prop distance 
+    @[@].track = 520
     };
 
 @
@@ -586,7 +587,7 @@ Here we scale the \.{PWC} durations and apply the ``deadBand''.
       outputCh2 = 0;
      }
 
-     // Apply deadband`
+     // Apply deadband
  outputCh1 = (abs(outputCh1) > pTranslation_s->deadBand)?outputCh1:0;
  outputCh2 = (abs(outputCh2) > pTranslation_s->deadBand)?outputCh2:0;
 
@@ -610,16 +611,12 @@ The LED is used to indicate when both channels PWM's are zeros.
 if(pTranslation_s->larboardOut || pTranslation_s->starboardOut)
    {
     pInput_s->stopped = FALSE;
-#if 0
     ledCntl(OFF);
-#endif
    }
  else
     {
      pInput_s->stopped = TRUE;
-#if 0
      ledCntl(ON);
-#endif
     }
 
 
@@ -649,10 +646,10 @@ void diveTick(inputStruct *pInput_s)
 const uint8_t oneSecond = 64;
 static uint8_t tickCount = 0;
 
-const uint16_t divingSeconds = 60 * oneSecond;
+const uint16_t divingSeconds = 20 * oneSecond;
 static uint16_t divingCount = divingSeconds;
 
-const uint16_t submersedSeconds = 60 * oneSecond;
+const uint16_t submersedSeconds = 12 * oneSecond;
 static uint16_t submersedCount = submersedSeconds;
 
 
@@ -662,6 +659,11 @@ First, if a pressure reading is allowed,
 use edgeSelect to set up for a reading.
 It will only get the ADC value when ALLOWPRESSURE is true, happening after
 both pwc channels have been read.
+
+Once diving, or better, \.{ALLOWPRESSURE} is ensured.
+This way as the signal is lost, it can't inadvertantly start looking to the
+PWC signal. If that happened it would drive to the lake-bottom!
+
 @c
 
 if (pInput_s->edge == ALLOWPRESSURE) edgeSelect(pInput_s);
@@ -688,6 +690,7 @@ if (!(tickCount += oneSecond / 4))
                           0L );
 
         setPwm(output, output);
+        pInput_s->edge = ALLOWPRESSURE; // Ensure we don't loose this!
         wdt_reset();
 
         // Here we see if we are deep enough to transition to submerged
@@ -708,9 +711,26 @@ if (pInput_s->stopped == TRUE)
   static uint8_t debcount = debticks;
   if ((PIND & (1<<PD0)) && debcount < debticks) debcount++;
   if ((~PIND & (1<<PD0)) && debcount > 0) debcount--;
-  if (!debcount) pInput_s->controlMode = DIVING;
+  if (!debcount)
+     {
+      pInput_s->controlMode = DIVING;
+      debcount = debticks;
+     }
  }
 
+// Debounce the dive cancel
+if (pInput_s->controlMode >= DIVING)
+ {
+  const uint8_t debticks = oneSecond;
+  static uint8_t debcount = debticks;
+  if ((PIND & (1<<PD0)) && debcount < debticks) debcount++;
+  if ((~PIND & (1<<PD0)) && debcount > 0) debcount--;
+  if (!debcount)
+     {
+      pInput_s->controlMode = IDLE;
+      debcount = debticks;
+     }
+ }
 @
  These two timers limit the duration of these modes.
 @c
@@ -725,14 +745,6 @@ if (pInput_s->stopped == TRUE)
 
  if (submersedCount == 0)
       pInput_s->controlMode = IDLE;
-
-
-#if 0
-if (pInput_s->controlMode >= DIVING)
-   ledCntl(ON);
-     else
-   ledCntl(OFF);
-#endif
 
 @/}@/
 
@@ -773,10 +785,10 @@ result in an instant extreme, apparent depth.
 @c
 void depthCalc(inputStruct *pInput_s)
     @/{@/
- const  int16_t offset = 118; //units of ADC offset from zero depth
- const  int16_t gain = 11;    //units of gain in 1/32 cm per ADC unit
- static int16_t buffStart[1<<4]={0};
- const  int16_t *buffEnd = buffStart+(1<<4)-1;
+ const  int16_t offset = 118L; //units of ADC offset from zero depth
+ const  int16_t gain = 11L;    //units of gain in 1/32 cm per ADC unit
+ static int16_t buffStart[(1<<4)+1]={0};
+ const  int16_t *buffEnd = buffStart+((1<<4)-1);
  static int16_t *buffIndex = buffStart;
  static int16_t sum = 0; // Accommodates size up to 1<<6 only
 
@@ -791,15 +803,8 @@ Now that we have our sample, pass control back to the input capture interrupt.
  sum += *buffIndex; // Include this new item in the sum
  buffIndex = (buffIndex != buffEnd)?buffIndex+1:buffStart;
 
- pInput_s->processDepth = (int16_t)(((sum>>5)-offset)*gain)/32;
+ pInput_s->processDepth = (((sum>>5L)-offset)*gain)/32L;
 
-#if 0
-        // test one meter
-        if(pInput_s->processDepth > pInput_s->setDepth)
-            ledCntl(ON);
-         else
-            ledCntl(OFF);
-#endif
  @/}@/
 
 @
@@ -1151,13 +1156,6 @@ if(pPar_s->mode == AUTOMATIC)
 
    int32_t error = (int32_t)pPar_s->setpoint - *pPar_s->pPvLast;
 
-#if 1
-        // test one meter
-        if( *pPar_s->pPvLast >  50L)
-            ledCntl(ON);
-         else
-            ledCntl(OFF);
-#endif
 
    total = (int32_t)pPar_s->k_p *
         (dDer + (int32_t)pPar_s->k_i * (int32_t)error - (int32_t)pPar_s->k_d * dSecDer);
@@ -1177,13 +1175,16 @@ void takDdcSetPid(ddcParameters* pPar_s, int16_t p, int16_t i, int16_t d,
                   int16_t t)
 @/{@/
  pPar_s->t = t;
- pPar_s->k_p = (int16_t)p;
- pPar_s->k_i = (int16_t)i * pPar_s->t;
- pPar_s->k_d = (int16_t)d * pPar_s->t;
+ pPar_s->k_p = p;
+ pPar_s->k_i = i * pPar_s->t;
+ pPar_s->k_d = d * pPar_s->t;
 
  // set the process value pointer to the first position
  pPar_s->pPvLast = pPar_s->pPvN;
 @/}@/
+
+
+
 
 @ @<Initialize pin outputs...@>=
  // set the led port direction; This is pin \#17
