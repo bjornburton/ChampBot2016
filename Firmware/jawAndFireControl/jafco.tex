@@ -80,9 +80,9 @@ functions.
 \&{void} ${}({*}\\{handleirq})(\,)\K\NULL{}$;\6
 \&{int} \\{main}(\&{void})\1\1\6
 $\{{}$\6
-\X28:Initialize interrupts\X\6
-\X27:Initialize pin inputs\X\6
-\X26:Initialize pin outputs\X\par
+\X26:Initialize interrupts\X\6
+\X25:Initialize pin inputs\X\6
+\X24:Initialize pin outputs\X\par
 \U1.\fi
 
 \M{7}
@@ -98,7 +98,7 @@ the ``sleep'' mode is used.
 The specific type of sleep is `idle'.
 In idle, execution stops but timers continue.
 Interrupts are used to wake it.
-\Y\B\X34:Configure to wake upon interrupt\X\par
+\Y\B\X32:Configure to wake upon interrupt\X\par
 \fi
 
 \M{9}
@@ -156,7 +156,7 @@ This sequence will proceed only while the button is held.
 $\{{}$\6
 \\{uint8\_t}\\{firingstate};\7
 \&{enum} \&{firingstates} ${}\{{}$\1\6
-${}\\{ready},\39\\{opened},\39\\{warned},\39\\{igniting},\39\\{burning}{}$\2\6
+${}\\{ready},\39\\{opened},\39\\{igniting},\39\\{burning},\39\\{cooling}{}$\2\6
 ${}\};{}$\7
 ${}\\{firingstate}\K\\{ready}{}$;\par
 \fi
@@ -170,7 +170,7 @@ delay.
 \fi
 
 \M{17}
-The jaw opens here for fire, but also partly as a warning.
+The jaw opens here for fire.
 \Y\B\&{if} ${}(\\{firingstate}\E\\{ready}){}$\5
 ${}\{{}$\1\6
 \\{jawcntl}(\.{OPEN});\6
@@ -180,67 +180,35 @@ ${}\\{firingstate}\K\\{opened};{}$\6
 \fi
 
 \M{18}
-Three warning bursts from the ignitor and then a 1000 ms duck delay.
+Ignitor is on.
 \Y\B\&{if} ${}(\\{firingstate}\E\\{opened}){}$\5
 ${}\{{}$\1\6
-\&{for} ${}(\\{int8\_t}\\{count}\K\T{0};{}$ ${}\\{count}<\T{3};{}$ ${}\\{count}%
-\PP){}$\5
-${}\{{}$\1\6
 \\{igncntl}(\.{ON});\6
-\\{\_delay\_ms}(\T{100});\6
-\\{igncntl}(\.{OFF});\6
-\\{\_delay\_ms}(\T{200});\6
-\4${}\}{}$\2\6
-\\{\_delay\_ms}(\T{1000});\C{ human duck time }\6
-${}\\{firingstate}\K\\{warned};{}$\6
-\&{continue};\6
-\4${}\}{}$\2\par
-\fi
-
-\M{19}
-Fuel opens for precharge, then some delay.
-\Y\B\&{if} ${}(\\{firingstate}\E\\{warned}){}$\5
-${}\{{}$\1\6
-\\{fuelcntl}(\.{ON});\6
-\\{\_delay\_ms}(\T{500});\6
 ${}\\{firingstate}\K\\{igniting};{}$\6
 \&{continue};\6
 \4${}\}{}$\2\par
 \fi
 
-\M{20}
-Ignitor on, delay a short time.
+\M{19}
+Fuel opens.
 \Y\B\&{if} ${}(\\{firingstate}\E\\{igniting}){}$\5
 ${}\{{}$\1\6
-\\{igncntl}(\.{ON});\6
-\\{\_delay\_ms}(\T{250});\6
-\\{igncntl}(\.{OFF});\6
+\\{fuelcntl}(\.{ON});\6
 ${}\\{firingstate}\K\\{burning};{}$\6
 \&{continue};\6
-\4${}\}{}$\2\par
-\fi
-
-\M{21}
-We should have fire now, but will tend it in case of wind.
-\Y\B\&{if} ${}(\\{firingstate}\E\\{burning}){}$\5
-${}\{{}$\1\6
-\\{\_delay\_ms}(\T{1000});\6
-\\{igncntl}(\.{ON});\6
-\\{\_delay\_ms}(\T{200});\6
-\\{igncntl}(\.{OFF});\6
-\&{continue};\6
 \4${}\}{}$\2\6
-$\}{}$\par
+\\{\_delay\_ms}(\T{10}); $\}{}$\par
 \fi
 
-\M{22}
+\M{20}
 Once the loop fails we set fuel and ignitor off and close the jaw.
 \Y\B\\{igncntl}(\.{OFF});\6
 \\{fuelcntl}(\.{OFF});\6
+\\{\_delay\_ms}(\T{5000});\6
 \\{jawcntl}(\.{CLOSE}); $\}{}$\par
 \fi
 
-\N{1}{23}The ISRs.
+\N{1}{21}The ISRs.
 
 The ISRs are pretty skimpy as they mostly used to point \PB{\\{handleirq}(\,)}
 to
@@ -249,7 +217,7 @@ The need for global variables is minimized.
 
 \fi
 
-\M{24}
+\M{22}
 This vector responds to the jaw input at pin PB3 or fire input at PB4.
 A simple debounce is included.
 \Y\B\.{ISR}(\\{PCINT0\_vect})\6
@@ -281,14 +249,14 @@ ${}\\{handleirq}\K{\AND}\\{fireseq};{}$\2\6
 \4${}\}{}$\2\par
 \fi
 
-\N{1}{25}These are the supporting routines, procedures and configuration
+\N{1}{23}These are the supporting routines, procedures and configuration
 blocks.
 
 
 Here is the block that sets-up the digital I/O pins.
 \fi
 
-\M{26}\B\X26:Initialize pin outputs\X${}\E{}$\6
+\M{24}\B\X24:Initialize pin outputs\X${}\E{}$\6
 ${}\{{}$\C{ set the jaw port direction }\1\6
 ${}\.{DDRB}\MRL{{\OR}{\K}}(\T{1}\LL\.{DDB0}){}$;\C{ set the fuel port direction
 }\6
@@ -298,7 +266,7 @@ ${}\.{DDRB}\MRL{{\OR}{\K}}(\T{1}\LL\.{DDB2});{}$\6
 \4${}\}{}$\2\par
 \U6.\fi
 
-\M{27}\B\X27:Initialize pin inputs\X${}\E{}$\6
+\M{25}\B\X25:Initialize pin inputs\X${}\E{}$\6
 ${}\{{}$\C{ set the jaw input pull-up }\1\6
 ${}\.{PORTB}\MRL{{\OR}{\K}}(\T{1}\LL\.{PORTB3}){}$;\C{ set the fire input
 pull-up }\6
@@ -306,7 +274,7 @@ ${}\.{PORTB}\MRL{{\OR}{\K}}(\T{1}\LL\.{PORTB4});{}$\6
 \4${}\}{}$\2\par
 \U6.\fi
 
-\M{28}\B\X28:Initialize interrupts\X${}\E{}$\6
+\M{26}\B\X26:Initialize interrupts\X${}\E{}$\6
 ${}\{{}$\C{ enable  change interrupt for jaw input }\1\6
 ${}\.{PCMSK}\MRL{{\OR}{\K}}(\T{1}\LL\.{PCINT3}){}$;\C{ enable  change interrupt
 for fire input }\6
@@ -316,7 +284,7 @@ ${}\.{GIMSK}\MRL{{\OR}{\K}}(\T{1}\LL\.{PCIE});{}$\6
 \4${}\}{}$\2\par
 \U6.\fi
 
-\M{29}
+\M{27}
 Here is a simple procedure to operate the jaw.
 \Y\B\&{void} \\{jawcntl}(\\{uint8\_t}\\{state})\6
 ${}\{{}$\1\6
@@ -325,7 +293,7 @@ ${}\.{PORTB}\K\\{state}\?\.{PORTB}\OR(\T{1}\LL\.{PORTB0}):\.{PORTB}\AND\CM(%
 \4${}\}{}$\2\par
 \fi
 
-\M{30}
+\M{28}
 Here is a simple procedure to operate the fuel.
 \Y\B\&{void} \\{fuelcntl}(\\{uint8\_t}\\{state})\6
 ${}\{{}$\1\6
@@ -334,7 +302,7 @@ ${}\.{PORTB}\K\\{state}\?\.{PORTB}\OR(\T{1}\LL\.{PORTB1}):\.{PORTB}\AND\CM(%
 \4${}\}{}$\2\par
 \fi
 
-\M{31}
+\M{29}
 Here is a simple procedure to operate the ignition.
 \Y\B\&{void} \\{igncntl}(\\{uint8\_t}\\{state})\6
 ${}\{{}$\1\6
@@ -343,12 +311,12 @@ ${}\.{PORTB}\K\\{state}\?\.{PORTB}\OR(\T{1}\LL\.{PORTB2}):\.{PORTB}\AND\CM(%
 \4${}\}{}$\2\par
 \fi
 
-\M{32}
+\M{30}
 See section the datasheet for details on the Watchdog Timer.
 We are not using it right now.
 \fi
 
-\M{33}\B\X33:Initialize watchdog timer\X${}\E{}$\6
+\M{31}\B\X31:Initialize watchdog timer\X${}\E{}$\6
 ${}\{{}$\1\6
 ${}\.{WDTCR}\MRL{{\OR}{\K}}(\T{1}\LL\.{WDCE})\OR(\T{1}\LL\.{WDE});{}$\6
 ${}\.{WDTCR}\K(\T{1}\LL\.{WDIE})\OR(\T{1}\LL\.{WDP2}){}$;\SHC{ reset after
@@ -356,11 +324,11 @@ about 0.25 seconds }\6
 \4${}\}{}$\2\par
 \fi
 
-\M{34}
+\M{32}
 Setting these bits configure sleep\_mode() to go to ``idle''.
 Idle allows the counters and comparator to continue during sleep.
 
-\Y\B\4\X34:Configure to wake upon interrupt\X${}\E{}$\6
+\Y\B\4\X32:Configure to wake upon interrupt\X${}\E{}$\6
 ${}\{{}$\1\6
 ${}\.{MCUCR}\MRL{\AND{\K}}\CM(\T{1}\LL\.{SM1});{}$\6
 ${}\.{MCUCR}\MRL{\AND{\K}}\CM(\T{1}\LL\.{SM0});{}$\6

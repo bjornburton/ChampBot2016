@@ -157,9 +157,9 @@ enum firingstates
   {
    ready,
    opened,
-   warned,
    igniting,
-   burning
+   burning,
+   cooling
   };
 
 
@@ -175,71 +175,37 @@ while( !(PINB & (1<<PB4)) )
      {@/
 
       @
-      The jaw opens here for fire, but also partly as a warning.
+      The jaw opens here for fire.
       @c
       if(firingstate == ready)
         {@/
-
 
          jawcntl(OPEN);
          firingstate = opened;
          continue;
         }
       @
-      Three warning bursts from the ignitor and then a 1000 ms duck delay.
+      Ignitor is on.
       @c
       if(firingstate == opened)
         {@/
 
-         for(int8_t count = 0;count < 3;count++)
-            {
-             igncntl(ON);
-             _delay_ms(100);
-             igncntl(OFF);
-             _delay_ms(200);
-            }
-
-         _delay_ms(1000); /* human duck time */
-         firingstate = warned;
-         continue;
-        }
-      @
-      Fuel opens for precharge, then some delay.
-      @c
-
-      if(firingstate == warned)
-        {@/
-
-         fuelcntl(ON);
-         _delay_ms(500);
+         igncntl(ON);
          firingstate = igniting;
          continue;
         }
       @
-      Ignitor on, delay a short time.
+      Fuel opens.
       @c
 
       if(firingstate == igniting)
         {@/
 
-         igncntl(ON);
-         _delay_ms(250);
-		 igncntl(OFF);
+         fuelcntl(ON);
          firingstate = burning;
          continue;
         }
-
-      @
-      We should have fire now, but will tend it in case of wind.
-      @c
-      if(firingstate == burning)
-        {@/
-          _delay_ms(1000);
-          igncntl(ON);
-          _delay_ms(200);
-          igncntl(OFF);
-          continue;
-		 }
+      _delay_ms(10);
      }
 
 @
@@ -248,6 +214,7 @@ Once the loop fails we set fuel and ignitor off and close the jaw.
 
  igncntl(OFF);
  fuelcntl(OFF);
+ _delay_ms(5000);
  jawcntl(CLOSE);
 
 }
