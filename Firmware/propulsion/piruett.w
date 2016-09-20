@@ -669,6 +669,7 @@ This will count off ticks for a $1\over 4$ second event.
 This is the Direct Digital Control crunch interval.
 Every interval the depth is collected and DDC is run so that it is always
 ready to take the reins.
+Once it is diving or submerged it will reset the watch dog timer.
 @c
 
 if (!(tickCount+=oneSecond / 4))
@@ -685,7 +686,7 @@ if (!(tickCount+=oneSecond / 4))
                            0L );
 
          setPwm(output, output);
-
+         wdt_reset();
          if (*pInput_s->pPid_s->pPvLast >= 95L) // Being within 5 cm is fine
             pInput_s->controlMode = SUBMERGED;
          }
@@ -1131,24 +1132,25 @@ pPar_s->pPvLast = pPar_s->pPvN + (++offset%PIDSAMPCT);
 @/
 // at this point offset points at the oldest sample
 
- if(pPar_s->mode == AUTOMATIC)
-   {
-    int16_t dDer=0, dSecDer=0;
+if(pPar_s->mode == AUTOMATIC)
+  {
+   int32_t dDer=0, dSecDer=0;
 
-    for(int8_t coefIdx = 0;coefIdx < PIDSAMPCT;coefIdx++)
-         {
-          dDer += derCoef[coefIdx] * pPar_s->pPvN[offset%PIDSAMPCT];
-          dSecDer += secDerCoef[coefIdx] * pPar_s->pPvN[offset%PIDSAMPCT];
-          offset++;
-         }
+   for(int8_t coefIdx = 0;coefIdx < PIDSAMPCT;coefIdx++)
+      {
+       dDer += (int32_t)derCoef[coefIdx] * pPar_s->pPvN[offset%PIDSAMPCT];
+       dSecDer += (int32_t)secDerCoef[coefIdx] * pPar_s->pPvN[offset%PIDSAMPCT];
+       offset++;
+       }
 
     // Since the derivative was in sixths we must divide by six
-    dDer /= 6;
+   dDer /= 6;
 
-    int16_t err = pPar_s->setpoint - *pPar_s->pPvLast;
+   int16_t err = pPar_s->setpoint - *pPar_s->pPvLast;
 
 
-    total = pPar_s->k_p*(dDer + pPar_s->k_i*err - pPar_s->k_d*dSecDer);
+   total = (int32_t)pPar_s->k_p *
+          (dDer + (int32_t)pPar_s->k_i * err - (int32_t)pPar_s->k_d * dSecDer);
 
     pPar_s->m = int32clamp( (pPar_s->m + total), pPar_s->mMin, pPar_s->mMax);
    }
@@ -1157,17 +1159,17 @@ pPar_s->pPvLast = pPar_s->pPvN + (++offset%PIDSAMPCT);
  return pPar_s->m;
 @/}@/
 
-@*  Control Initialization.
- Takahashi Direct Digital Control PID and Period initialization.
- Call this once to set parameters, or when they are changed.
+@* Control Initialization.
+Takahashi Direct Digital Control PID and Period initialization.
+Call this once to set parameters, or when they are changed.
 @c
 void takDdcSetPid(ddcParameters* pPar_s, int16_t p, int16_t i, int16_t d,
                   int16_t t)
 @/{@/
  pPar_s->t = t;
  pPar_s->k_p = (int16_t)p;
- pPar_s->k_i = (int16_t)i / pPar_s->t;
- pPar_s->k_d = (int16_t)d / pPar_s->t;
+ pPar_s->k_i = (int16_t)i * pPar_s->t;
+ pPar_s->k_d = (int16_t)d * pPar_s->t;
 
  // set the process value pointer to the first position
  pPar_s->pPvLast = pPar_s->pPvN;
