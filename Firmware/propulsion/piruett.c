@@ -609,9 +609,9 @@ pInput_s->pPid_s->m= 0L;
 /*:40*//*41:*/
 #line 711 "./piruett.w"
 
-static enum{set,reset}allow= reset;
+static int8_t debounceSet= FALSE;
 
-if(allow==set&&pInput_s->stopped==TRUE&&pInput_s->controlMode<DIVING)
+if(debounceSet&&pInput_s->stopped==TRUE&&pInput_s->controlMode<DIVING)
 {
 static uint8_t debcount= debounceTime;
 if((PIND&(1<<PD0))&&debcount<debounceTime)
@@ -623,14 +623,14 @@ debcount--;
 if(!debcount)
 {
 pInput_s->controlMode= DIVING;
-allow= reset;
+debounceSet= FALSE;
 debcount= debounceTime;
 }
 }
 
 
 
-if(allow==reset)
+if(!debounceSet)
 {
 static uint8_t debcount= debounceTime;
 if((~PIND&(1<<PD0))&&debcount<debounceTime)
@@ -641,14 +641,14 @@ debcount--;
 
 if(!debcount)
 {
-allow= set;
+debounceSet= TRUE;
 debcount= debounceTime;
 }
 }
 
 
 
-if(allow==set&&pInput_s->controlMode>=DIVING)
+if(debounceSet&&pInput_s->controlMode>=DIVING)
 {
 static uint8_t debcount= debounceTime;
 if((PIND&(1<<PD0))&&debcount<debounceTime)
@@ -660,7 +660,7 @@ debcount--;
 if(!debcount)
 {
 pInput_s->controlMode= IDLE;
-allow= reset;
+debounceSet= FALSE;
 debcount= debounceTime;
 }
 }

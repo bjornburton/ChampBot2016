@@ -709,9 +709,9 @@ if (!(tickCount += oneSecond/4))
 First we ensure that the relay stays closed long enough before diving.
 Next we ensure the relay stays open long enough before allowing a cancel.
 Now that a cancel is allowed, we ensure that the relay stays closed long enough.@c 
-static enum {set, reset} allow = reset;
+static int8_t debounceSet = FALSE;
 
-if (allow == set && pInput_s->stopped == TRUE && pInput_s->controlMode < DIVING)
+if (debounceSet && pInput_s->stopped == TRUE && pInput_s->controlMode < DIVING)
  {
   static uint8_t debcount = debounceTime;
   if ((PIND & (1<<PD0)) && debcount < debounceTime)
@@ -723,14 +723,14 @@ if (allow == set && pInput_s->stopped == TRUE && pInput_s->controlMode < DIVING)
   if (!debcount)
      {
       pInput_s->controlMode = DIVING;
-      allow = reset;
+      debounceSet = FALSE;
       debcount = debounceTime;
      }
  }
 
 
-// Here we reset 
-if (allow == reset)
+// Here we reset
+if (!debounceSet)
  {
   static uint8_t debcount = debounceTime;
   if ((~PIND & (1<<PD0)) && debcount < debounceTime)
@@ -741,14 +741,14 @@ if (allow == reset)
 
   if (!debcount)
      {
-      allow = set;
+      debounceSet = TRUE;
       debcount = debounceTime;
      }
  }
 
 
 // Debounce the cancel
-if (allow == set && pInput_s->controlMode >= DIVING)
+if (debounceSet && pInput_s->controlMode >= DIVING)
  {
   static uint8_t debcount = debounceTime;
   if ((PIND & (1<<PD0)) && debcount < debounceTime)
@@ -760,7 +760,7 @@ if (allow == set && pInput_s->controlMode >= DIVING)
   if (!debcount)
      {
       pInput_s->controlMode = IDLE;
-      allow = reset;
+      debounceSet = FALSE;
       debcount = debounceTime;
      }
  }
