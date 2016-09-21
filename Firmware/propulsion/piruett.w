@@ -706,64 +706,48 @@ if (!(tickCount += oneSecond/4))
 
 
 @ This is the debounce section.
-First we ensure that the relay stays closed long enough before diving.
-Next we ensure the relay stays open long enough before allowing a cancel.
-Now that a cancel is allowed, we ensure that the relay stays closed long enough.@c 
+First we ensure that the relay stays open long enough before accepting an input.
+Next we ensure the relay stays closed long enough.
+@c
+
 static int8_t debounceSet = FALSE;
 
-if (debounceSet && pInput_s->stopped == TRUE && pInput_s->controlMode < DIVING)
+if (debounceSet)
  {
   static uint8_t debcount = debounceTime;
   if ((PIND & (1<<PD0)) && debcount < debounceTime)
       debcount++;
-   else // The active relay state
-    if ((~PIND & (1<<PD0)) && debcount > 0)
+   else if ((~PIND & (1<<PD0)) && debcount > 0)
       debcount--;
 
   if (!debcount)
      {
-      pInput_s->controlMode = DIVING;
-      debounceSet = FALSE;
-      debcount = debounceTime;
-     }
- }
+      if (pInput_s->stopped == TRUE && pInput_s->controlMode < DIVING)
+         {
+          pInput_s->controlMode = DIVING;
+          debounceSet = FALSE;
+         }
+     else if (pInput_s->controlMode >= DIVING)
+         {
+          pInput_s->controlMode = IDLE;
+          debounceSet = FALSE;
+         }
+       debcount = debounceTime;
+      }
+ } else {
+    static uint8_t debcount = debounceTime;
+    if ((~PIND & (1<<PD0)) && debcount < debounceTime)
+        debcount++;
+    else // The reset state
+      if ((PIND & (1<<PD0)) && debcount > 0)
+          debcount--;
 
-
-// Here we reset
-if (!debounceSet)
- {
-  static uint8_t debcount = debounceTime;
-  if ((~PIND & (1<<PD0)) && debcount < debounceTime)
-      debcount++;
-   else // The reset state
-    if ((PIND & (1<<PD0)) && debcount > 0)
-      debcount--;
-
-  if (!debcount)
-     {
-      debounceSet = TRUE;
-      debcount = debounceTime;
-     }
- }
-
-
-// Debounce the cancel
-if (debounceSet && pInput_s->controlMode >= DIVING)
- {
-  static uint8_t debcount = debounceTime;
-  if ((PIND & (1<<PD0)) && debcount < debounceTime)
-      debcount++;
-   else // The active state
-    if ((~PIND & (1<<PD0)) && debcount > 0)
-      debcount--;
-
-  if (!debcount)
-     {
-      pInput_s->controlMode = IDLE;
-      debounceSet = FALSE;
-      debcount = debounceTime;
-     }
- }
+    if (!debcount)
+       {
+        debounceSet = TRUE;
+        debcount = debounceTime;
+       }
+    }
 
 
 @
