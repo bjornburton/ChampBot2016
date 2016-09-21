@@ -644,6 +644,7 @@ This procedure maintains various timers.
 void diveTick(inputStruct *pInput_s)
 @/{@/
 const uint8_t oneSecond = 64;
+const uint8_t debounceTime = oneSecond/8;
 static uint8_t tickCount = 0;
 
 const uint16_t divingSeconds = 20 * oneSecond;
@@ -676,7 +677,7 @@ ready to take the reins.
 Once it is diving or submerged it will reset the watch dog timer.
 @c
 
-if (!(tickCount += oneSecond / 4))
+if (!(tickCount += oneSecond/4))
    {
     *pInput_s->pPid_s->pPvLast = pInput_s->processDepth;
     takDdc(pInput_s->pPid_s);
@@ -704,36 +705,57 @@ if (!(tickCount += oneSecond / 4))
   }
 
 
-// Debounce the dive start
-if (pInput_s->stopped == TRUE)
- {
-  const uint8_t debticks = oneSecond;
-  static uint8_t debcount = debticks;
-  if ((PIND & (1<<PD0)) && debcount < debticks) debcount++;
-  if ((~PIND & (1<<PD0)) && debcount > 0) debcount--;
-  if (!debcount)
-     {
-      pInput_s->controlMode = DIVING;
-      debcount = debticks;
-     }
- }
+@ This is the debounce section.
+First we ensure that the relay stays open long enough before accepting an input.
+Next we ensure the relay stays closed long enough.
+@c
 
-// Debounce the dive cancel
-if (pInput_s->controlMode >= DIVING)
+static int8_t debounceSet = FALSE;
+
+if (debounceSet)
  {
-  const uint8_t debticks = oneSecond;
-  static uint8_t debcount = debticks;
-  if ((PIND & (1<<PD0)) && debcount < debticks) debcount++;
-  if ((~PIND & (1<<PD0)) && debcount > 0) debcount--;
+  static uint8_t debcount = debounceTime;
+  if ((PIND & (1<<PD0)) && debcount < debounceTime)
+      debcount++;
+   else if ((~PIND & (1<<PD0)) && debcount > 0)
+      debcount--;
+
   if (!debcount)
      {
-      pInput_s->controlMode = IDLE;
-      debcount = debticks;
-     }
- }
+      if (pInput_s->stopped == TRUE && pInput_s->controlMode < DIVING)
+         {
+          pInput_s->controlMode = DIVING;
+          debounceSet = FALSE;
+         }
+     else if (pInput_s->controlMode >= DIVING)
+         {
+          pInput_s->controlMode = IDLE;
+          debounceSet = FALSE;
+         }
+       debcount = debounceTime;
+      }
+ } else {
+    static uint8_t debcount = debounceTime;
+    if ((~PIND & (1<<PD0)) && debcount < debounceTime)
+        debcount++;
+    else // The reset state
+      if ((PIND & (1<<PD0)) && debcount > 0)
+          debcount--;
+
+    if (!debcount)
+       {
+        debounceSet = TRUE;
+        debcount = debounceTime;
+       }
+    }
+
+
 @
  These two timers limit the duration of these modes.
 @c
+
+ if (pInput_s->controlMode == IDLE) divingCount = submersedCount = 0;
+
  divingCount = (pInput_s->controlMode == DIVING)
                ?divingCount-1:divingSeconds;
 
