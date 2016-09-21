@@ -52,11 +52,11 @@ and ``AVR130: Setup and Use the AVR Timers'' Rev. 2505A–AVR–02/02.
 
 
 @ @<Prototypes@>=
-void jawcntl(uint8_t state); // Jaw open and close
-void fuelcntl(uint8_t state); // Fuel on and off
-void igncntl(uint8_t state); // on and off
-void releaseseq(void);
-void fireseq(void);
+void jawCntl(uint8_t state); // Jaw open and close
+void fuelCntl(uint8_t state); // Fuel on and off
+void ignCntl(uint8_t state); // on and off
+void releaseSeq(void);
+void fireSeq(void);
 
 @
 My lone global variable is a function pointer.
@@ -65,7 +65,7 @@ This pointer gets the appropriate function attached by one of the |"ISR()"|
 functions.
 
 @<Global var...@>=
-void @[@] (*handleirq)() = NULL;
+void @[@] (*handleIrq)() = NULL;
 
 
 @/
@@ -105,9 +105,9 @@ comming out at each interrupt event.
 We don't want anything cooking while we are asleap.
 @c
 
- igncntl(OFF);
- fuelcntl(OFF);
- jawcntl(CLOSE);
+ ignCntl(OFF);
+ fuelCntl(OFF);
+ jawCntl(CLOSE);
 
 @
 Now we wait in ``idle'' for any interrupt event.
@@ -117,11 +117,11 @@ Now we wait in ``idle'' for any interrupt event.
 If execution arrives here, some interrupt has been detected.
 @c
 
-if (handleirq != NULL)  // not sure why it would be, but to be safe
+if (handleIrq != NULL)  // not sure why it would be, but to be safe
    @/{@/
-    handleirq();
-    handleirq = NULL; // reset so that the action cannot be repeated
-    }// end if handleirq
+    handleIrq();
+    handleIrq = NULL; // reset so that the action cannot be repeated
+    }// end if handleIrq
   } // end for
 
 return 0; // it's the right thing to do!
@@ -130,30 +130,30 @@ return 0; // it's the right thing to do!
 @* Interrupt Handling.
 
 @c
-void releaseseq()@/
+void releaseSeq()@/
 {@/
 
 @
 This sequence will proceed only while the button is held.
 @c
 
-jawcntl(OPEN);
+jawCntl(OPEN);
 
    while(!(PINB & (1<<PB3)))
          _delay_ms(10);
 
-jawcntl(CLOSE);
+jawCntl(CLOSE);
 
 }
 @
 
 
 @c
-void fireseq()@/
+void fireSeq()@/
 {@/
 
-uint8_t firingstate;
-enum firingstates
+uint8_t firingState;
+enum firingStates
   {
    ready,
    opened,
@@ -163,7 +163,7 @@ enum firingstates
   };
 
 
-firingstate = ready;
+firingState = ready;
 
 @
 This sequence will proceed only while the button is held.
@@ -177,32 +177,32 @@ while( !(PINB & (1<<PB4)) )
       @
       The jaw opens here for fire.
       @c
-      if(firingstate == ready)
+      if(firingState == ready)
         {@/
 
-         jawcntl(OPEN);
-         firingstate = opened;
+         jawCntl(OPEN);
+         firingState = opened;
          continue;
         }
       @
       Ignitor is on.
       @c
-      if(firingstate == opened)
+      if(firingState == opened)
         {@/
 
-         igncntl(ON);
-         firingstate = igniting;
+         ignCntl(ON);
+         firingState = igniting;
          continue;
         }
       @
       Fuel opens.
       @c
 
-      if(firingstate == igniting)
+      if(firingState == igniting)
         {@/
 
-         fuelcntl(ON);
-         firingstate = burning;
+         fuelCntl(ON);
+         firingState = burning;
          continue;
         }
       _delay_ms(10);
@@ -212,17 +212,17 @@ while( !(PINB & (1<<PB4)) )
 Once the loop fails we set fuel and ignitor off and close the jaw.
 @c
 
- igncntl(OFF);
- fuelcntl(OFF);
+ ignCntl(OFF);
+ fuelCntl(OFF);
  _delay_ms(5000);
- jawcntl(CLOSE);
+ jawCntl(CLOSE);
 
 }
 
 
 @*The ISRs.
 
-The ISRs are pretty skimpy as they mostly used to point |handleirq()| to
+The ISRs are pretty skimpy as they mostly used to point |handleIrq()| to
 the correct function.
 The need for global variables is minimized.
 
@@ -259,10 +259,10 @@ while(abs(dbp4) < high)
      }
 
 if(dbp3 == low)
-   handleirq = &releaseseq;
+   handleIrq = &releaseSeq;
  else
  if(dbp4 == low)
-   handleirq = &fireseq;
+   handleIrq = &fireSeq;
 }
 
 
@@ -272,12 +272,35 @@ if(dbp3 == low)
 Here is the block that sets-up the digital I/O pins.
 @ @<Initialize pin outputs...@>=@/
 {@/
+ // 14.4.9 DDRD – The Port D Data Direction Register
  /* set the jaw port direction */
   DDRB |= (1<<DDB0);
  /* set the fuel port direction */
   DDRB |= (1<<DDB1);
  /* set the ignition port direction */
   DDRB |= (1<<DDB2);
+}
+
+
+@
+Timer Counter 0 is configured for ``Phase Correct'' PWM which, according to the
+datasheet, is preferred for motor control.
+OC0A and OC0B are set to clear on a match which creates a
+non-inverting PWM.
+@c
+
+@ @<Initialize Timer@>=
+{@/
+
+ // 15.9.1 TCCR0A – Timer/Counter Control Register A
+ TCCR0A |= (1<<WGM00);   // Phase correct, mode 1 of PWM (table 15-9)
+ TCCR0A |= (1<<COM0A1);  // Set/Clear on Comparator A match (table 15-4)
+ TCCR0A &= ~(1<<COM0A0); // Set  on Comparator A match (table 15-4)
+ TCCR0A |= (1<<COM0B1);  // Set/Clear on Comparator B match (table 15-7)
+ TCCR0A &= ~(1<<COM0B0); // Set on Comparator B match (table 15-7)
+
+ // 15.9.2 TCCR0B – Timer/Counter Control Register B
+ TCCR0B |= (1<<CS01);   // Prescaler set to clk/8 (table 15-9)
 }
 
 @ @<Initialize pin inputs...@>=@/
@@ -301,24 +324,36 @@ Here is the block that sets-up the digital I/O pins.
 @
 Here is a simple procedure to operate the jaw.
 @c
-void jawcntl(uint8_t state)@/
+void jawCntl(uint8_t state)@/
 {@/
-  PORTB = state ? PORTB | (1<<PORTB0) : PORTB & ~(1<<PORTB0);
+  if (state)
+   {
+    OCR0A = 0xff;
+    _delay_ms(200);
+    OCR0A = 0xff >> 1;
+   }
+   else {OCR0A = 0x00;}
 }
 
 @
 Here is a simple procedure to operate the fuel.
 @c
-void fuelcntl(uint8_t state)@/
+void fuelCntl(uint8_t state)@/
 {@/
+  if (state)
+   {
+    OCR0B = 0xff;
+    _delay_ms(200);
+    OCR0B = 0xff >> 1;
+   }
+   else {OCR0A = 0x00;}
 
-  PORTB = state ? PORTB | (1<<PORTB1) : PORTB & ~(1<<PORTB1);
 }
 
 @
 Here is a simple procedure to operate the ignition.
 @c
-void igncntl(uint8_t state)@/
+void ignCntl(uint8_t state)@/
 {@/
   PORTB = state ? PORTB | (1<<PORTB2) : PORTB & ~(1<<PORTB2);
 }
