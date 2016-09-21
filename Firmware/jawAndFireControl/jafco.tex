@@ -62,11 +62,11 @@ and ``AVR130: Setup and Use the AVR Timers'' Rev. 2505A–AVR–02/02.
 \U1.\fi
 
 \M{5}\B\X5:Prototypes\X${}\E{}$\6
-\&{void} \\{jawcntl}(\\{uint8\_t}\\{state});\SHC{ Jaw open and close }\6
-\&{void} \\{fuelcntl}(\\{uint8\_t}\\{state});\SHC{ Fuel on and off }\6
-\&{void} \\{igncntl}(\\{uint8\_t}\\{state});\SHC{ on and off }\6
-\&{void} \\{releaseseq}(\&{void});\6
-\&{void} \\{fireseq}(\&{void});\par
+\&{void} \\{jawCntl}(\\{uint8\_t}\\{state});\SHC{ Jaw open and close }\6
+\&{void} \\{fuelCntl}(\\{uint8\_t}\\{state});\SHC{ Fuel on and off }\6
+\&{void} \\{ignCntl}(\\{uint8\_t}\\{state});\SHC{ on and off }\6
+\&{void} \\{releaseSeq}(\&{void});\6
+\&{void} \\{fireSeq}(\&{void});\par
 \U1.\fi
 
 \M{6}
@@ -77,11 +77,11 @@ This pointer gets the appropriate function attached by one of the \PB{%
 functions.
 
 \Y\B\4\X6:Global variables\X${}\E{}$\6
-\&{void} ${}({*}\\{handleirq})(\,)\K\NULL{}$;\6
+\&{void} ${}({*}\\{handleIrq})(\,)\K\NULL{}$;\6
 \&{int} \\{main}(\&{void})\1\1\6
 $\{{}$\6
-\X26:Initialize interrupts\X\6
-\X25:Initialize pin inputs\X\6
+\X28:Initialize interrupts\X\6
+\X27:Initialize pin inputs\X\6
 \X24:Initialize pin outputs\X\par
 \U1.\fi
 
@@ -98,7 +98,7 @@ the ``sleep'' mode is used.
 The specific type of sleep is `idle'.
 In idle, execution stops but timers continue.
 Interrupts are used to wake it.
-\Y\B\X32:Configure to wake upon interrupt\X\par
+\Y\B\X34:Configure to wake upon interrupt\X\par
 \fi
 
 \M{9}
@@ -112,9 +112,9 @@ $\{{}$\par
 
 \M{10}
 We don't want anything cooking while we are asleap.
-\Y\B\\{igncntl}(\.{OFF});\6
-\\{fuelcntl}(\.{OFF});\6
-\\{jawcntl}(\.{CLOSE});\par
+\Y\B\\{ignCntl}(\.{OFF});\6
+\\{fuelCntl}(\.{OFF});\6
+\\{jawCntl}(\.{CLOSE});\par
 \fi
 
 \M{11}
@@ -124,12 +124,12 @@ Now we wait in ``idle'' for any interrupt event.
 
 \M{12}
 If execution arrives here, some interrupt has been detected.
-\Y\B\&{if} ${}(\\{handleirq}\I\NULL{}$)\SHC{ not sure why it would be, but to
+\Y\B\&{if} ${}(\\{handleIrq}\I\NULL{}$)\SHC{ not sure why it would be, but to
 be safe }\6
 ${}\{{}$\1\6
-\\{handleirq}(\,);\6
-${}\\{handleirq}\K\NULL{}$;\SHC{ reset so that the action cannot be repeated }\6
-\4${}\}{}$\SHC{ end if handleirq }\2\6
+\\{handleIrq}(\,);\6
+${}\\{handleIrq}\K\NULL{}$;\SHC{ reset so that the action cannot be repeated }\6
+\4${}\}{}$\SHC{ end if handleIrq }\2\6
 $\}{}$\SHC{ end for }\6
 \&{return} \T{0};\SHC{ it's the right thing to do! }\6
 $\}{}$\SHC{ end main() }\par
@@ -137,28 +137,28 @@ $\}{}$\SHC{ end main() }\par
 
 \N{1}{13}Interrupt Handling.
 
-\Y\B\&{void} \\{releaseseq}(\,)\1\1\6
+\Y\B\&{void} \\{releaseSeq}(\,)\1\1\6
 $\{{}$\par
 \fi
 
 \M{14}
 This sequence will proceed only while the button is held.
-\Y\B\\{jawcntl}(\.{OPEN});\6
+\Y\B\\{jawCntl}(\.{OPEN});\6
 \&{while} ${}(\R(\.{PINB}\AND(\T{1}\LL\.{PB3}))){}$\1\5
 \\{\_delay\_ms}(\T{10});\2\6
-\\{jawcntl}(\.{CLOSE}); $\}{}$\par
+\\{jawCntl}(\.{CLOSE}); $\}{}$\par
 \fi
 
 \M{15}
 
 
-\Y\B\&{void} \\{fireseq}(\,)\1\1\6
+\Y\B\&{void} \\{fireSeq}(\,)\1\1\6
 $\{{}$\6
-\\{uint8\_t}\\{firingstate};\7
-\&{enum} \&{firingstates} ${}\{{}$\1\6
+\\{uint8\_t}\\{firingState};\7
+\&{enum} \&{firingStates} ${}\{{}$\1\6
 ${}\\{ready},\39\\{opened},\39\\{igniting},\39\\{burning},\39\\{cooling}{}$\2\6
 ${}\};{}$\7
-${}\\{firingstate}\K\\{ready}{}$;\par
+${}\\{firingState}\K\\{ready}{}$;\par
 \fi
 
 \M{16}
@@ -171,30 +171,30 @@ delay.
 
 \M{17}
 The jaw opens here for fire.
-\Y\B\&{if} ${}(\\{firingstate}\E\\{ready}){}$\5
+\Y\B\&{if} ${}(\\{firingState}\E\\{ready}){}$\5
 ${}\{{}$\1\6
-\\{jawcntl}(\.{OPEN});\6
-${}\\{firingstate}\K\\{opened};{}$\6
+\\{jawCntl}(\.{OPEN});\6
+${}\\{firingState}\K\\{opened};{}$\6
 \&{continue};\6
 \4${}\}{}$\2\par
 \fi
 
 \M{18}
 Ignitor is on.
-\Y\B\&{if} ${}(\\{firingstate}\E\\{opened}){}$\5
+\Y\B\&{if} ${}(\\{firingState}\E\\{opened}){}$\5
 ${}\{{}$\1\6
-\\{igncntl}(\.{ON});\6
-${}\\{firingstate}\K\\{igniting};{}$\6
+\\{ignCntl}(\.{ON});\6
+${}\\{firingState}\K\\{igniting};{}$\6
 \&{continue};\6
 \4${}\}{}$\2\par
 \fi
 
 \M{19}
 Fuel opens.
-\Y\B\&{if} ${}(\\{firingstate}\E\\{igniting}){}$\5
+\Y\B\&{if} ${}(\\{firingState}\E\\{igniting}){}$\5
 ${}\{{}$\1\6
-\\{fuelcntl}(\.{ON});\6
-${}\\{firingstate}\K\\{burning};{}$\6
+\\{fuelCntl}(\.{ON});\6
+${}\\{firingState}\K\\{burning};{}$\6
 \&{continue};\6
 \4${}\}{}$\2\6
 \\{\_delay\_ms}(\T{10}); $\}{}$\par
@@ -202,15 +202,15 @@ ${}\\{firingstate}\K\\{burning};{}$\6
 
 \M{20}
 Once the loop fails we set fuel and ignitor off and close the jaw.
-\Y\B\\{igncntl}(\.{OFF});\6
-\\{fuelcntl}(\.{OFF});\6
+\Y\B\\{ignCntl}(\.{OFF});\6
+\\{fuelCntl}(\.{OFF});\6
 \\{\_delay\_ms}(\T{5000});\6
-\\{jawcntl}(\.{CLOSE}); $\}{}$\par
+\\{jawCntl}(\.{CLOSE}); $\}{}$\par
 \fi
 
 \N{1}{21}The ISRs.
 
-The ISRs are pretty skimpy as they mostly used to point \PB{\\{handleirq}(\,)}
+The ISRs are pretty skimpy as they mostly used to point \PB{\\{handleIrq}(\,)}
 to
 the correct function.
 The need for global variables is minimized.
@@ -243,9 +243,9 @@ ${}\\{dbp4}\PP;{}$\2\6
 \\{\_delay\_ms}(\T{1});\6
 \4${}\}{}$\2\6
 \&{if} ${}(\\{dbp3}\E\\{low}){}$\1\5
-${}\\{handleirq}\K{\AND}\\{releaseseq};{}$\2\6
+${}\\{handleIrq}\K{\AND}\\{releaseSeq};{}$\2\6
 \&{else} \&{if} ${}(\\{dbp4}\E\\{low}){}$\1\5
-${}\\{handleirq}\K{\AND}\\{fireseq};{}$\2\6
+${}\\{handleIrq}\K{\AND}\\{fireSeq};{}$\2\6
 \4${}\}{}$\2\par
 \fi
 
@@ -257,7 +257,8 @@ Here is the block that sets-up the digital I/O pins.
 \fi
 
 \M{24}\B\X24:Initialize pin outputs\X${}\E{}$\6
-${}\{{}$\C{ set the jaw port direction }\1\6
+${}\{{}$\SHC{ 14.4.9 DDRD – The Port D Data Direction Register }\C{ set the
+jaw port direction }\1\6
 ${}\.{DDRB}\MRL{{\OR}{\K}}(\T{1}\LL\.{DDB0}){}$;\C{ set the fuel port direction
 }\6
 ${}\.{DDRB}\MRL{{\OR}{\K}}(\T{1}\LL\.{DDB1}){}$;\C{ set the ignition port
@@ -266,7 +267,32 @@ ${}\.{DDRB}\MRL{{\OR}{\K}}(\T{1}\LL\.{DDB2});{}$\6
 \4${}\}{}$\2\par
 \U6.\fi
 
-\M{25}\B\X25:Initialize pin inputs\X${}\E{}$\6
+\M{25}
+Timer Counter 0 is configured for ``Phase Correct'' PWM which, according to the
+datasheet, is preferred for motor control.
+OC0A and OC0B are set to clear on a match which creates a
+non-inverting PWM.
+\Y\B\par
+\fi
+
+\M{26}\B\X26:Initialize Timer\X${}\E{}$\6
+${}\{{}$\SHC{ 15.9.1 TCCR0A – Timer/Counter Control Register A }\1\6
+${}\.{TCCR0A}\MRL{{\OR}{\K}}(\T{1}\LL\.{WGM00}){}$;\SHC{ Phase correct, mode 1
+of PWM (table 15-9) }\6
+${}\.{TCCR0A}\MRL{{\OR}{\K}}(\T{1}\LL\.{COM0A1}){}$;\SHC{ Set/Clear on
+Comparator A match (table 15-4) }\6
+${}\.{TCCR0A}\MRL{\AND{\K}}\CM(\T{1}\LL\.{COM0A0}){}$;\SHC{ Set  on Comparator
+A match (table 15-4) }\6
+${}\.{TCCR0A}\MRL{{\OR}{\K}}(\T{1}\LL\.{COM0B1}){}$;\SHC{ Set/Clear on
+Comparator B match (table 15-7) }\6
+${}\.{TCCR0A}\MRL{\AND{\K}}\CM(\T{1}\LL\.{COM0B0}){}$;\SHC{ Set on Comparator B
+match (table 15-7) }\SHC{ 15.9.2 TCCR0B – Timer/Counter Control Register B }\6
+${}\.{TCCR0B}\MRL{{\OR}{\K}}(\T{1}\LL\.{CS01}){}$;\SHC{ Prescaler set to clk/8
+(table 15-9) }\6
+\4${}\}{}$\2\par
+\fi
+
+\M{27}\B\X27:Initialize pin inputs\X${}\E{}$\6
 ${}\{{}$\C{ set the jaw input pull-up }\1\6
 ${}\.{PORTB}\MRL{{\OR}{\K}}(\T{1}\LL\.{PORTB3}){}$;\C{ set the fire input
 pull-up }\6
@@ -274,7 +300,7 @@ ${}\.{PORTB}\MRL{{\OR}{\K}}(\T{1}\LL\.{PORTB4});{}$\6
 \4${}\}{}$\2\par
 \U6.\fi
 
-\M{26}\B\X26:Initialize interrupts\X${}\E{}$\6
+\M{28}\B\X28:Initialize interrupts\X${}\E{}$\6
 ${}\{{}$\C{ enable  change interrupt for jaw input }\1\6
 ${}\.{PCMSK}\MRL{{\OR}{\K}}(\T{1}\LL\.{PCINT3}){}$;\C{ enable  change interrupt
 for fire input }\6
@@ -284,39 +310,55 @@ ${}\.{GIMSK}\MRL{{\OR}{\K}}(\T{1}\LL\.{PCIE});{}$\6
 \4${}\}{}$\2\par
 \U6.\fi
 
-\M{27}
-Here is a simple procedure to operate the jaw.
-\Y\B\&{void} \\{jawcntl}(\\{uint8\_t}\\{state})\6
-${}\{{}$\1\6
-${}\.{PORTB}\K\\{state}\?\.{PORTB}\OR(\T{1}\LL\.{PORTB0}):\.{PORTB}\AND\CM(%
-\T{1}\LL\.{PORTB0});{}$\6
-\4${}\}{}$\2\par
-\fi
-
-\M{28}
-Here is a simple procedure to operate the fuel.
-\Y\B\&{void} \\{fuelcntl}(\\{uint8\_t}\\{state})\6
-${}\{{}$\1\6
-${}\.{PORTB}\K\\{state}\?\.{PORTB}\OR(\T{1}\LL\.{PORTB1}):\.{PORTB}\AND\CM(%
-\T{1}\LL\.{PORTB1});{}$\6
-\4${}\}{}$\2\par
-\fi
-
 \M{29}
+Here is a simple procedure to operate the jaw.
+\Y\B\&{void} \\{jawCntl}(\\{uint8\_t}\\{state})\6
+${}\{{}$\1\6
+\&{if} (\\{state})\5
+${}\{{}$\1\6
+${}\.{OCR0A}\K\T{\^ff};{}$\6
+\\{\_delay\_ms}(\T{200});\6
+${}\.{OCR0A}\K\T{\^ff}\GG\T{1};{}$\6
+\4${}\}{}$\2\6
+\&{else}\5
+${}\{{}$\1\6
+${}\.{OCR0A}\K\T{\^00};{}$\6
+\4${}\}{}$\2\6
+\4${}\}{}$\2\par
+\fi
+
+\M{30}
+Here is a simple procedure to operate the fuel.
+\Y\B\&{void} \\{fuelCntl}(\\{uint8\_t}\\{state})\6
+${}\{{}$\1\6
+\&{if} (\\{state})\5
+${}\{{}$\1\6
+${}\.{OCR0B}\K\T{\^ff};{}$\6
+\\{\_delay\_ms}(\T{200});\6
+${}\.{OCR0B}\K\T{\^ff}\GG\T{1};{}$\6
+\4${}\}{}$\2\6
+\&{else}\5
+${}\{{}$\1\6
+${}\.{OCR0A}\K\T{\^00};{}$\6
+\4${}\}{}$\2\6
+\4${}\}{}$\2\par
+\fi
+
+\M{31}
 Here is a simple procedure to operate the ignition.
-\Y\B\&{void} \\{igncntl}(\\{uint8\_t}\\{state})\6
+\Y\B\&{void} \\{ignCntl}(\\{uint8\_t}\\{state})\6
 ${}\{{}$\1\6
 ${}\.{PORTB}\K\\{state}\?\.{PORTB}\OR(\T{1}\LL\.{PORTB2}):\.{PORTB}\AND\CM(%
 \T{1}\LL\.{PORTB2});{}$\6
 \4${}\}{}$\2\par
 \fi
 
-\M{30}
+\M{32}
 See section the datasheet for details on the Watchdog Timer.
 We are not using it right now.
 \fi
 
-\M{31}\B\X31:Initialize watchdog timer\X${}\E{}$\6
+\M{33}\B\X33:Initialize watchdog timer\X${}\E{}$\6
 ${}\{{}$\1\6
 ${}\.{WDTCR}\MRL{{\OR}{\K}}(\T{1}\LL\.{WDCE})\OR(\T{1}\LL\.{WDE});{}$\6
 ${}\.{WDTCR}\K(\T{1}\LL\.{WDIE})\OR(\T{1}\LL\.{WDP2}){}$;\SHC{ reset after
@@ -324,11 +366,11 @@ about 0.25 seconds }\6
 \4${}\}{}$\2\par
 \fi
 
-\M{32}
+\M{34}
 Setting these bits configure sleep\_mode() to go to ``idle''.
 Idle allows the counters and comparator to continue during sleep.
 
-\Y\B\4\X32:Configure to wake upon interrupt\X${}\E{}$\6
+\Y\B\4\X34:Configure to wake upon interrupt\X${}\E{}$\6
 ${}\{{}$\1\6
 ${}\.{MCUCR}\MRL{\AND{\K}}\CM(\T{1}\LL\.{SM1});{}$\6
 ${}\.{MCUCR}\MRL{\AND{\K}}\CM(\T{1}\LL\.{SM0});{}$\6
