@@ -302,11 +302,6 @@ inputStruct* pInput_s = &(inputStruct){@/
     @[@].controlMode = IDLE,@/
     @[@].setDepth = 100L,@/
     @[@].pPid_s  = &(ddcParameters){@/
-        @t\hskip 1in@> @[@] .k_p = 1,@/
-        @t\hskip 1in@>@[@]  .k_i = 1,@/
-        @t\hskip 1in@>@[@]  .k_d = 1,@/
-        @t\hskip 1in@>@[@]  .t   = 1,@/
-        @t\hskip 1in@>@[@]  .m   = 0,@/
         @t\hskip 1in@>@[@]  .mMin = -10000L,@/
         @t\hskip 1in@>@[@]  .mMax = 10000L,@/
         @t\hskip 1in@>@[@]  .mode = AUTOMATIC@/
@@ -553,8 +548,8 @@ Until we have collected the edges we will assume there is no signal.
 @c
 
 
-const uint16_t pwcMinIn = 25990U; // minimum normal value from receiver
-const uint16_t pwcMaxIn = 41850U; // maximum normal value from receiver
+const uint16_t pwcMinIn = 25990UL; // minimum normal value from receiver
+const uint16_t pwcMaxIn = 41850UL; // maximum normal value from receiver
 const int16_t minOut = INT8_MIN;  // minimum value of thrust
 const int16_t maxOut = INT8_MAX;  // maximum value of thrust
 @
