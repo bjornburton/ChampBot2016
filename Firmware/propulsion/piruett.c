@@ -310,7 +310,6 @@ TCCR0A|= (1<<COM0B0);
 TCCR0B|= (1<<CS01);
 }
 
-
 /*:73*/
 #line 338 "./piruett.w"
 
@@ -470,8 +469,8 @@ void thrustCalc(inputStruct*pInput_s)
 
 
 
-const uint16_t pwcMinIn= 25990U;
-const uint16_t pwcMaxIn= 41850U;
+const uint16_t pwcMinIn= 25990UL;
+const uint16_t pwcMaxIn= 41850UL;
 const int16_t minOut= INT8_MIN;
 const int16_t maxOut= INT8_MAX;
 /*:33*//*34:*/

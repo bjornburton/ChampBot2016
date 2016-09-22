@@ -13,40 +13,40 @@ This is the firmware portion of the propulsion and dive system for our
 It features separate thrust and steering, including piruett turning. 
 
 It facilitates lateral  motion by taking ``thrust'' and ``radius'' pulse-width,
-or \.{PWC}, inputs from the Futaba-Kyosho \.{RC} receiver and converting them
+or PWC, inputs from the Futaba-Kyosho RC receiver and converting them
 to the appropriate motor actions.
 
 Thrust is receiver-channel 2, entering analog input ADC1 \.{(PC1)}, and Radius
 is channel 1, at ADC0 \.{(PC0)}.
-The action will be similar to driving an \.{RC} car or boat.
+The action will be similar to driving an RC car or boat.
 By keeping it natural, it should be easier to navigate the course than with a
 skid-steer style control.
 
 For PWM we are using Timer Counter 0.
 We are using the Wingxing \.{DBH-01 (B/C)} and the Inputs are unique on this.
-The \.{PWM} logic input goes to two different pins, depending on direction!
-The non-\.{PWM} pin must be held low.
-This is a big problem since \.{PWM} outputs have dedicated pins.
-Two \.{AVR} timers would be needed to control two motors; waistful.
+The PWM logic input goes to two different pins, depending on direction!
+The non-PWM pin must be held low.
+This is a big problem since PWM outputs have dedicated pins.
+Two AVR timers would be needed to control two motors; waistful.
 
-The odd example in the \.{DBH-01} datasheet has \.{PWM} on \.{IN1} and \.{LOW}
+The odd example in the \.{DBH-01} datasheet has PWM on \.{IN1} and \.{LOW}
 on \.{IN2} for forward.
-For reverse, \.{LOW} on \.{IN1} and \.{PWM} on \.{IN2}.
+For reverse, \.{LOW} on \.{IN1} and PWM on \.{IN2}.
 
 Rulling out multiple timers (four comparators), additional outputs,
 or a \.{PLD}, the best solution we could find was a adding glue logic.
 A single 74F02 was chosen; a quad \.{NOR}.
 Keeping this solution simple, i.e. one gate-type and on one chip, required
-that the \.{AVR} outputs be inverted.
+that the AVR outputs be inverted.
 \includegraphics[width=25 pc]{glue.png}a
 This one chip handles the logic for both motors. With this, the AVR outputs
-direction on one pin and \.{PWM} on the other.
-At the H-Bridge, the pin receiving \.{PWM} is selected based on motor
+direction on one pin and PWM on the other.
+At the H-Bridge, the pin receiving PWM is selected based on motor
 direction.
-The remaining, non-\.{PWM} pin, is held low.
+The remaining, non-PWM pin, is held low.
 
 
-\.{PWM} is \.{OC0B} and \.{OC0A} (\.{PD5} and \.{PD6}), located on Trinket pins 5 an 6.
+PWM is \.{OC0B} and \.{OC0A} (\.{PD5} and \.{PD6}), located on Trinket pins 5 an 6.
 The A fail-safe relay output will be at pin 8 (\.{PB0}).
 
 
@@ -66,7 +66,7 @@ Dive is initiated by a low signal on FTDI pin \#4. A relay circuit across
 FTDI \#4 and \#1 (Gnd) will do this. 
 
 @** Implementation.
-The Flysky FS-IA6 receiver has six \.{PWC} channels.
+The Flysky FS-IA6 receiver has six PWC channels.
 The pulse-width from the receiver is at 20~ms intervals but is adjustable.
 The pulses start simultaniously but end at the time corosponding to the
 controls.
@@ -82,24 +82,24 @@ The thrust and radius will be translated to power to the
 port and starboard motors.
 When near median the motors will be disabled through a dead-band.
 Stiction in the motor probably wouldn't allow it to move anyway, at this low
-duty-cycle. Both the \.{PWM} and safety relay will open.
+duty-cycle. Both the PWM and safety relay will open.
 The motors will also be disabled when there are no input pulses; in this way
 champ wont run-off if the range is exceeded.
 This function is handled by the watchdog timer.
 
 The radius control will also be the rotate control, if thrust is zero.
-Timer-Counter 0 is used for the \.{PWM}.
+Timer-Counter 0 is used for the PWM.
 
 The ATmega328 has a 16 bit PWMs with two comparators, Timer 1.
-This has an ``Input Capture Unit'' that may be used for \.{PWC} decoding.
-\.{PWC} being the type of signal from the RC receiver.
+This has an ``Input Capture Unit'' that may be used for PWC decoding.
+PWC being the type of signal from the RC receiver.
 That seems like as elegant a solution as I will find and it is recommended by
 Atmel to use it for this purpose.
 
-The best way to use this nice feature is to take the \.{PWC} signals into
+The best way to use this nice feature is to take the PWC signals into
 the \.{MUX}, through the comparator and into the Input Capture Unit.
 
-For the \.{PWC} measurement, this app note, AVR135, is helpful:
+For the PWC measurement, this app note, AVR135, is helpful:
  www.atmel.com/images/doc8014.pdf
 
 
@@ -109,7 +109,7 @@ After each pulses captured from its respective channel,
 there's an 18~ms dead-time.
 That's over 250,000 clock cycles.
 This will provide ample time to sample pressure and do all of the math
-and set the motor \.{PWM}s.
+and set the motor PWMs.
 
 
 Extensive use was made of the datasheet, Atmel
@@ -217,7 +217,7 @@ typedef enum {
 
 @ Here is the structure type to keep track of the state of
 inputs, e.g. servo timing.
-Rise and Fall indicate the \.{PWC} edge times.
+Rise and Fall indicate the PWC edge times.
 |edge| is set to the edge type expected for the interrupt.
 @<Types...@>=
 typedef struct {
@@ -332,7 +332,7 @@ is set.
 
 @
 
-The \.{PWM} is used to control larboard and starboard motors through \.{OC0A}
+The PWM is used to control larboard and starboard motors through \.{OC0A}
 (D5) and \.{OC0B} (D6), respectivly.
 @c
 @<Initialize the Timer Counter 0 for PWM...@>
@@ -342,11 +342,11 @@ The \.{PWM} is used to control larboard and starboard motors through \.{OC0A}
 Rather than burning loops, waiting the balance of 18~ms for something to
 happen, the |sleep| mode is used.
 The specific type of sleep is |idle|.
-In idle, execution stops but timers, like the Input Capture Unit and \.{PWM}
+In idle, execution stops but timers, like the Input Capture Unit and PWM
 continue to operate.
-Another thing that will happen during sleep is an \.{ADC} conversion from the
+Another thing that will happen during sleep is an ADC conversion from the
 pressure sensor.
-Interrupts ``Input Capture'', ``tick'', ``\.{ADC}'' and ``Watchdog'',
+Interrupts ``Input Capture'', ``tick'', ``ADC'' and ``Watchdog'',
 are used to wake it up.
 
 It's important to note that an \.{ISR} procedure must be defined to allow the
@@ -375,7 +375,7 @@ interrupt event caused by an edge, tick or watchdog timeout.
   {@/
 
 @
-Now that a loop is started, the drive \.{PWM} has its values and we wait in
+Now that a loop is started, the drive PWM has its values and we wait in
 |idle| for the edge on the channel selected.
 Each sucessive loop will finish in the same way.
 After three passes |translation_s| will have good values to work with.
@@ -461,7 +461,7 @@ ISR (WDT_vect)
 @/}@/
 
 @
-This procedure computes the durations from the \.{PWC} signal edge capture
+This procedure computes the durations from the PWC signal edge capture
 values from the Input Capture Unit.
 With the levers centered the durations should be about 1500~$\mu$s so at
 16~Mhz the count should be near 24000.
@@ -564,7 +564,7 @@ transStruct* pTranslation_s = &(transStruct){
     };
 
 @
-Here we scale the \.{PWC} durations and apply the ``deadBand''.
+Here we scale the PWC durations and apply the ``deadBand''.
 @c
 
  {
@@ -984,7 +984,7 @@ For starboard, piruett is reversed, making it rotate counter to larboard.
 @
 This procedure sets the signal to the H-Bridge.
 Forward is positive an negative is reverse.
-For the \.{PWM} we load the value into the unsigned registers.
+For the PWM we load the value into the unsigned registers.
 There is no duty-cycle limit here.
 @c
 void setPwm(int16_t larboardOut, int16_t starboardOut)
@@ -1327,12 +1327,12 @@ When controlled remotly or in an autonomous dive this should not time-out.
 }
 
 @
-\.{PWM} setup isn't too scary.
-Timer Counter 0 is configured for ``Phase Correct'' \.{PWM} which, according to
+PWM setup isn't too scary.
+Timer Counter 0 is configured for ``Phase Correct'' PWM which, according to
 the datasheet, is preferred for motor control.
-\.{OC0A} (port) and \.{OC0B} (starboard) are used for \.{PWM}.
+\.{OC0A} (port) and \.{OC0B} (starboard) are used for PWM.
 The prescaler is set to clk/8 and with a 16 MHz clock the $f$ is about 3922~Hz.
-We are using |Set| on comparator match to invert the \.{PWM}, suiting the
+We are using |Set| on comparator match to invert the PWM, suiting the
 glue-logic  which drives the H-Bridge.
 
 @ @<Initialize the Timer Counter 0 for PWM...@>=
@@ -1347,6 +1347,8 @@ glue-logic  which drives the H-Bridge.
 // 15.9.2 TCCR0B – Timer/Counter Control Register B
  TCCR0B |= (1<<CS01);   // Prescaler set to clk/8 (table 15-9)
 }
+
+@** The End.
 
 
 
