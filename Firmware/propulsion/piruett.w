@@ -10,10 +10,10 @@
 @** Introduction.
 This is the firmware portion of the propulsion and dive system for our
 2016 Champbot.
-It features separate thrust and steering, including piruett turning. 
+It features separate thrust and steering, including piruett turning.
 
 It facilitates lateral  motion by taking ``thrust'' and ``radius'' pulse-width,
-or PWC, inputs from the Futaba-Kyosho RC receiver and converting them
+or PWC, inputs from the RC receiver and converting them
 to the appropriate motor actions.
 
 Thrust is receiver-channel 2, entering analog input ADC1 \.{(PC1)}, and Radius
@@ -27,14 +27,14 @@ We are using the Wingxing \.{DBH-01 (B/C)} and the Inputs are unique on this.
 The PWM logic input goes to two different pins, depending on direction!
 The non-PWM pin must be held low.
 This is a big problem since PWM outputs have dedicated pins.
-Two AVR timers would be needed to control two motors; waistful.
+Two AVR timers would be needed to control two motors; wasteful.
 
 The odd example in the \.{DBH-01} datasheet has PWM on \.{IN1} and \.{LOW}
 on \.{IN2} for forward.
 For reverse, \.{LOW} on \.{IN1} and PWM on \.{IN2}.
 
-Rulling out multiple timers (four comparators), additional outputs,
-or a \.{PLD}, the best solution we could find was a adding glue logic.
+Ruling out multiple timers (four comparators), additional outputs,
+or a PLD, the best solution we could find was a adding glue logic.
 A single 74F02 was chosen; a quad \.{NOR}.
 Keeping this solution simple, i.e. one gate-type and on one chip, required
 that the AVR outputs be inverted.
@@ -46,7 +46,8 @@ direction.
 The remaining, non-PWM pin, is held low.
 
 
-PWM is \.{OC0B} and \.{OC0A} (\.{PD5} and \.{PD6}), located on Trinket pins 5 an 6.
+PWM is \.{OC0B} and \.{OC0A} (\.{PD5} and \.{PD6}), located on Trinket
+pins 5 an 6.
 The A fail-safe relay output will be at pin 8 (\.{PB0}).
 
 
@@ -68,7 +69,7 @@ FTDI \#4 and \#1 (Gnd) will do this.
 @** Implementation.
 The Flysky FS-IA6 receiver has six PWC channels.
 The pulse-width from the receiver is at 20~ms intervals but is adjustable.
-The pulses start simultaniously but end at the time corosponding to the
+The pulses start simultaneously but end at the time corresponding to the
 controls.
 The on-time probably ranges from 1000--2000~$\mu$s including trim.
 1500~$\mu$s is the pulse-width for center or stop.
@@ -118,9 +119,9 @@ Extensive use was made of the datasheet, Atmel
 \vskip 4 pc
 \includegraphics[width=35 pc]{piruett.png}
 
-This is esentialy a boat and so I originaly wanted to use the word ``Port'' for
-the left-hand side, when facing the front.
-On a microcontroller that name is used for all of the ports so I chose the
+This is essentially a boat and so I originally wanted to use the word ``Port''
+for the left-hand side, when facing the front.
+On a micro-controller that name is used for all of the ports so I chose the
 older word ``larboard''.
 
 @c
@@ -152,8 +153,8 @@ older word ``larboard''.
 @d MAX_DUTYCYCLE 98 // 98\% to support charge pump of bridge-driver
 
 
-@* Interrupt Controls to allow selective development.
-@d WATCHDOG ON // reset and all
+@* Interrupt disablers to allow debugging.
+@d WATCHDOG ON // reset
 @d ANALOG ON
 @d TICK ON // TIMER2
 @d CAPTURE ON // TIMER1
@@ -168,9 +169,9 @@ older word ``larboard''.
 # include <stdint.h>
 # include <assert.h>
 @
-This structure is for the PID or Direct Digital Control.
+This structure is for the DDC or Direct Digital Control.
 |k_p| is the proportional coefficient.
-The larger it is, the bigger will be the effect of PID.
+The larger it is, the bigger will be the effect of control.
 |k_i| is the integral coefficient in resets per unit-time.
 |k_d| is the derivative coefficient.
 |m| is the output. Whatever is minimal power is probably a good
@@ -238,6 +239,7 @@ typedef struct {
     ddcParameters *pPid_s;
     } inputStruct;
 
+
 @ Here is a structure type to keep track of the state of translation items.
 @<Types...@>=
 typedef struct {
@@ -249,8 +251,8 @@ typedef struct {
     const int8_t  deadBand; // width of zero in terms of output units
    } transStruct;
 
-@ This structure type keeps track of the state of dive and submerge.
 
+@ This structure type keeps track of the state of dive and submerge.
 
 @ @<Prototypes...@>=
 void relayCntl(int8_t state);
@@ -284,7 +286,8 @@ void @[@] (*handleIrq)(inputStruct *) = NULL;
 
 @/
 
-
+@* The Beginning.
+@c
 int main(void)
 @/{@/
 
@@ -333,7 +336,7 @@ is set.
 @
 
 The PWM is used to control larboard and starboard motors through \.{OC0A}
-(D5) and \.{OC0B} (D6), respectivly.
+(D5) and \.{OC0B} (D6), respectively.
 @c
 @<Initialize the Timer Counter 0 for PWM...@>
 
@@ -365,9 +368,10 @@ Subsequent calls to |edgeSelect| rotates it to the next edge type.
 @c
 edgeSelect(pInput_s);
 
-@
+
+@* The ``Big'' Loop.
 This is the loop that does the work.
-It should spend most of its time in ``sleep\_mode'', comming out at each
+It should spend most of its time in ``sleep\_mode'', coming out at each
 interrupt event caused by an edge, tick or watchdog timeout.
 @c
 
@@ -377,7 +381,7 @@ interrupt event caused by an edge, tick or watchdog timeout.
 @
 Now that a loop is started, the drive PWM has its values and we wait in
 |idle| for the edge on the channel selected.
-Each sucessive loop will finish in the same way.
+Each successive loop will finish in the same way.
 After three passes |translation_s| will have good values to work with.
 
 First, if we are still in this loop, ensure that the watchdog stays in interrupt
@@ -417,12 +421,11 @@ return 0;
 }@/ /* end main() */
 
 
-@* Supporting routines, functions, procedures and configuration
-blocks.
+@* Interrupt Service Routines.
 
 @
 Here is the ISR that fires at each captured edge.
-Escentialy it grabs and processes the ``Input Capture'' data.
+Essentially it grabs and processes the ``Input Capture'' data.
 @c
 
 ISR (TIMER1_CAPT_vect)
@@ -431,7 +434,7 @@ ISR (TIMER1_CAPT_vect)
 @/}@/
 
 @
-Here is the \.{ISR} that fires at at about 64 Hz for the main dive tick.
+Here is the ISR that fires at at about 64 Hz for the main dive tick.
 This is used for the dive-control loop.
 @c
 ISR (TIMER2_COMPA_vect)
@@ -440,8 +443,8 @@ ISR (TIMER2_COMPA_vect)
 @/}@/
 
 @
-Here is the \.{ISR} that fires after a successful \.{ADC} conversion.
-The \.{ADC} is used to determine depth from pressure.
+Here is the ISR that fires after a successful \.{ADC} conversion.
+The ADC is used to determine depth from pressure.
 @c
 
 ISR (ADC_vect)
@@ -460,7 +463,7 @@ ISR (WDT_vect)
  handleIrq = &lostSignal;
 @/}@/
 
-@
+@* Input Capture.
 This procedure computes the durations from the PWC signal edge capture
 values from the Input Capture Unit.
 With the levers centered the durations should be about 1500~$\mu$s so at
@@ -481,7 +484,7 @@ Counting always starts on the rising edge and stops on the falling.
 On the falling edges we can compute the durations using modulus subtraction.
 
 Arrival at the last case establishes that there was a signal and sets mode 
-to REMOTE. 
+to REMOTE.
 @c
 
  if (pInput_s->controlMode >= DIVING) return;
@@ -522,7 +525,7 @@ thrustCalc(pInput_s);
 
 @/}@/
 
-@
+@* Thrust Calculator.
 This procedure connects pwc to pwm.
 @c
 void thrustCalc(inputStruct *pInput_s)
@@ -614,11 +617,9 @@ if(pTranslation_s->larboardOut || pTranslation_s->starboardOut)
      ledCntl(ON);
     }
 
-
-
 @/}@/
 
-@
+@* Lost Signal Handler.
 This procedure sets output to zero and resets edge
 in the event of a lost signal.
 @c
@@ -631,9 +632,11 @@ if (pInput_s->controlMode ==  IDLE)  setPwm(0,0);
  wdt_reset();
 @/}@/
 
-@
-This procedure maintains various timers.
-
+@* Dive Timer and Sequencer.
+This procedure maintains various timers involved in diving.
+It manages input debounce and the dive to no-dive toggle.
+It prevents diving while under way.
+It limits diving and submersion times.
 
 @c
 void diveTick(inputStruct *pInput_s)
@@ -645,7 +648,7 @@ static uint8_t tickCount = 0;
 const uint16_t divingSeconds = 20 * oneSecond;
 static uint16_t divingCount = divingSeconds;
 
-const uint16_t submersedSeconds = 12 * oneSecond;
+const uint16_t submersedSeconds = 15 * oneSecond;
 static uint16_t submersedCount = submersedSeconds;
 
 
@@ -766,16 +769,16 @@ if (debounceSet)
 @/}@/
 
 
-@
-This procedure will filter \.{ADC} results for a pressure in terms of \.{ADC}
+@* Pressure Sensor Conditioner.
+This procedure will filter ADC results for a pressure in terms of ADC
 units and convert that to signed integer depth in centimeters.
 First the comparator is reconnected to the \.{MUX} so that we miss as
 few RC events as possible.
-There is a moving average filter of size 32 or about $1 \over 2$ second in
-size.
-That size is efficient since the division is a binary right shift of 5 places.
+There is a moving average filter of size 16 or about $1 \over 4$ second in
+size. It can be made larger, if needed.
+That size is efficient since the division is a binary right shift of 4 places.
 Since the \.{ADC} is a mere 10 bits, and $2^{10} \times 32$ is only $2^{15}$,
-the sum may safely be of size |uint16_t|.
+the sum may safely be of size |uint16_t| even at that.
 
 Next, this must be in terms of depth.
 The sensor was tested and has a 0.49 V output at the surface and that output
@@ -791,8 +794,7 @@ Since $0.345$ is a floating point, and we don't want slow, massive
 floating-point libraries, we can multiply this by $2^5$, and round it, for
 a gain of 11.
 Depth will then be in a large integer of $1 \over 32$~cm.
-Then we will just need to right-shift that big number by 5 places
-(thus dividing by 32) to get to integer centimeters.
+Then we will divide by 32 to get to integer centimeters.
 
 Conversion to depth is signed since the offset is fixed and the sensor may
 drift a bit.
@@ -820,11 +822,11 @@ Now that we have our sample, pass control back to the input capture interrupt.
  sum += *buffIndex; // Include this new item in the sum
  buffIndex = (buffIndex != buffEnd)?buffIndex+1:buffStart;
 
- pInput_s->processDepth = (((sum>>5L)-offset)*gain)/32L;
+ pInput_s->processDepth = (((sum>>4)-offset)*gain)/32L;
 
  @/}@/
 
-@
+@* Imput Capture Edge Selector.
 The procedure edgeSelect configures the ``Input Capture'' unit to capture on
 the expected edge type from the remote control's proportional signal.
 
@@ -863,11 +865,12 @@ It seems odd but clearing it involves writing a one to it.
 @/}@/
 
 
-@
-The scaler function takes an input, in time, from the Input Capture
-Register and returns a value scaled by the parameters in structure
-|inputScale_s|. This is used to translate the stick position of the remote into
-terms that we can use.
+@* Universal Scaler.
+The scaler function takes an input and scales it,
+This may be in time, from the Input Capture Register, returning a value
+scaled by the parameters in structure |inputScale_s|.
+This is used to translate the stick position of the remote, and output from
+the DDC, into terms that we can use to set the PWM.
 @c
 int32_t scaler(int32_t input,
                int32_t pwcMinIn,
@@ -892,7 +895,7 @@ If it's not that simple, then compute the gain and offset and then continue in
 the usual way.
 This is not really an efficient method, recomputing gain and offset every time
 but we are not in a rush and it makes it easier since, if something changes,
-I don't have to manualy compute and enter these values. OK, maybe I could use
+I don't have to manually compute and enter these values. OK, maybe I could use
 the preprocessor but compiler optimization probably makes this pretty good.
 
 The constant |ampFact| amplifies values for math to take advantage of
@@ -909,10 +912,10 @@ return (ampFact*input/gain)-offset;
 
 @/}@/
 
-@
+@* Radius Translator.
 We need a way to translate |thrust| and |radius| in order to carve a
 turn. This procedure should do this but it's not going to be perfect as
-drag and slippage make thrust increase progressivly more than speed.
+drag and slippage make thrust increase progressively more than speed.
 Since the true speed is not known, we will use thrust.
 It should steer OK as long as the speed is constant and small changes in speed
 should not be too disruptive.
@@ -980,7 +983,6 @@ For starboard, piruett is reversed, making it rotate counter to larboard.
 @/}@/
 
 
-
 @
 This procedure sets the signal to the H-Bridge.
 Forward is positive an negative is reverse.
@@ -1012,6 +1014,8 @@ void setPwm(int16_t larboardOut, int16_t starboardOut)
        OCR0B = abs(starboardOut);
       }
 
+
+@* Simple Controls.
 @
 We must see if the fail-safe relay needs to be closed.
 @c
@@ -1071,8 +1075,8 @@ int32_t int32clamp(int32_t value, int32_t min, int32_t max)
  return (value > max)?max:(value < min)?min:value;
 @/}@/
 
-@
-This is the DDC or Direct Digital Control algorithm for the dive control.
+@* Direct Digital Controller.
+This is the DDC or Direct Digital Control algorithm used for the dive control.
 
 It is largely based on an algorithm from the book
 {\it Control and Dynamic Systems} by Yasundo Takahashi, et al.\ (1970).
@@ -1098,7 +1102,7 @@ I used numerical differentiation coefficients from the
 {\it CRC Standard Mathematical Tables, 27th Edition} (1985).
 The four point technique has also been extended to the proportional term.
 With all that it will have some inherent filtering.
-The coefficents in the array are arranged in order,
+The coefficients in the array are arranged in order,
 to use on the oldest to latest sample.
 
 A final difference from Takahashi's book form is that the integral is in
@@ -1109,16 +1113,16 @@ That structure holds everything unique to the channel of control, including
 the process and output history.
 
 The variable |offset| is computed from the distance between pointers.
-|offset|, with some modulus arithmatic, is used to move |pPvLast| to the
+|offset|, with some modulus arithmetic, is used to move |pPvLast| to the
 destination of the next process sample.
 This new location is also the present location of the oldest sample---that
 will be the first sample used for the derivatives.
 In mode |MANUAL| it just returns from here, but in |AUTOMATIC| the output
 is updated.
 
-The derivitives are then calculated, from the four last samples of the
+The derivatives are then calculated, from the four last samples of the
 process variable, using the coefficients.
-This begins at the oldest sample, indicated by offest, and walks to the latest.
+This begins at the oldest sample, indicated by offset, and walks to the latest.
 
 Next, the error between process and setpoint is computed.
 
@@ -1135,7 +1139,6 @@ This function should be called after a fresh process variable has been
 written to |pPvLast|.
 
 @c
-
 int16_t takDdc(ddcParameters* pPar_s)
 @/{@/
 const int8_t derCoef[]={2, -9, 18, -11};
@@ -1201,7 +1204,7 @@ void takDdcSetPid(ddcParameters* pPar_s, int16_t p, int16_t i, int16_t d,
 @/}@/
 
 
-
+@* Peripheral Initialization.
 
 @ @<Initialize pin outputs...@>=
  // set the led port direction; This is pin \#17
@@ -1287,10 +1290,10 @@ The timer is set to \.{CTC} mode so that the time loop is trimmable.
 In software, we want to divide by a power of two so we can use a simple
 compare and, here in this timer, no counter resets.
 
-We ultimatly need a divisor of $15625 \over 4$ or 3906. 
+We ultimately need a divisor of $15625 \over 4$ or 3906. 
 A divisor of 256 is possible in the counter.
-$3906.2/256$ is very near a power of 2, specificaly 16.
-$3906.2$ is 244.14, and, according to the datasheet, it interupts one count past that.
+$3906.2/256$ is very near a power of 2, specifically 16.
+$3906.2$ is 244.14, and, according to the datasheet, it interrupts one count past that.
 The time is trimmed to make 16 passes close to 0.25 seconds by loading compare
 register, \.{OCR2A}, with 243. The interval, with the software
 divisor, is
@@ -1314,7 +1317,7 @@ OCR2A = 243U;
 @
 See section 11.8 in the datasheet for details on the Watchdog Timer.
 This is in the ``Interrupt Mode'' through \.{WDIE}.
-When controlled remotly or in an autonomous dive this should not time-out.
+When controlled remotely or in an autonomous dive this should not time-out.
 
 @ @<Initialize watchdog timer...@>=
 {
@@ -1348,7 +1351,7 @@ glue-logic  which drives the H-Bridge.
  TCCR0B |= (1<<CS01);   // Prescaler set to clk/8 (table 15-9)
 }
 
-@** The End.
+@* The End.
 
 
 
