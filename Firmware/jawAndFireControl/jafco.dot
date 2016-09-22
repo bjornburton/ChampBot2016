@@ -1,11 +1,11 @@
 digraph callgraph {
-"fireSeq" -> "ignCntl" [style=solid];
-"fireSeq" -> "fuelCntl" [style=solid];
-"fireSeq" -> "jawCntl" [style=solid];
-"PCINT0_vect" -> "fireSeq" [style=dotted];
-"PCINT0_vect" -> "releaseSeq" [style=dotted];
-"main" -> "fuelCntl" [style=solid];
+"releaseSeq" -> "jawCntl" [style=solid];
 "main" -> "ignCntl" [style=solid];
 "main" -> "jawCntl" [style=solid];
-"releaseSeq" -> "jawCntl" [style=solid];
+"main" -> "fuelCntl" [style=solid];
+"PCINT0_vect" -> "fireSeq" [style=dotted];
+"PCINT0_vect" -> "releaseSeq" [style=dotted];
+"fireSeq" -> "ignCntl" [style=solid];
+"fireSeq" -> "jawCntl" [style=solid];
+"fireSeq" -> "fuelCntl" [style=solid];
 }

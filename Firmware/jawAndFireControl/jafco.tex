@@ -82,7 +82,8 @@ functions.
 $\{{}$\6
 \X28:Initialize interrupts\X\6
 \X27:Initialize pin inputs\X\6
-\X24:Initialize pin outputs\X\par
+\X24:Initialize pin outputs\X\6
+\X26:Initialize Timer\X\par
 \U1.\fi
 
 \M{7}
@@ -180,7 +181,7 @@ ${}\\{firingState}\K\\{opened};{}$\6
 \fi
 
 \M{18}
-Ignitor is on.
+CDI is switched on.
 \Y\B\&{if} ${}(\\{firingState}\E\\{opened}){}$\5
 ${}\{{}$\1\6
 \\{ignCntl}(\.{ON});\6
@@ -204,7 +205,6 @@ ${}\\{firingState}\K\\{burning};{}$\6
 Once the loop fails we set fuel and ignitor off and close the jaw.
 \Y\B\\{ignCntl}(\.{OFF});\6
 \\{fuelCntl}(\.{OFF});\6
-\\{\_delay\_ms}(\T{5000});\6
 \\{jawCntl}(\.{CLOSE}); $\}{}$\par
 \fi
 
@@ -290,7 +290,7 @@ match (table 15-7) }\SHC{ 15.9.2 TCCR0B – Timer/Counter Control Register B }\6
 ${}\.{TCCR0B}\MRL{{\OR}{\K}}(\T{1}\LL\.{CS01}){}$;\SHC{ Prescaler set to clk/8
 (table 15-9) }\6
 \4${}\}{}$\2\par
-\fi
+\U6.\fi
 
 \M{27}\B\X27:Initialize pin inputs\X${}\E{}$\6
 ${}\{{}$\C{ set the jaw input pull-up }\1\6
@@ -316,13 +316,13 @@ Here is a simple procedure to operate the jaw.
 ${}\{{}$\1\6
 \&{if} (\\{state})\5
 ${}\{{}$\1\6
-${}\.{OCR0A}\K\T{\^ff};{}$\6
-\\{\_delay\_ms}(\T{200});\6
-${}\.{OCR0A}\K\T{\^ff}\GG\T{1};{}$\6
+${}\.{OCR0A}\K\T{\^ff\$U};{}$\6
+\\{\_delay\_ms}(\T{250});\6
+${}\.{OCR0A}\K\T{\^cc\$U};{}$\6
 \4${}\}{}$\2\6
 \&{else}\5
 ${}\{{}$\1\6
-${}\.{OCR0A}\K\T{\^00};{}$\6
+${}\.{OCR0A}\K\T{\^00\$U};{}$\6
 \4${}\}{}$\2\6
 \4${}\}{}$\2\par
 \fi
@@ -333,13 +333,13 @@ Here is a simple procedure to operate the fuel.
 ${}\{{}$\1\6
 \&{if} (\\{state})\5
 ${}\{{}$\1\6
-${}\.{OCR0B}\K\T{\^ff};{}$\6
-\\{\_delay\_ms}(\T{200});\6
-${}\.{OCR0B}\K\T{\^ff}\GG\T{1};{}$\6
+${}\.{OCR0B}\K\T{\^ff\$U};{}$\6
+\\{\_delay\_ms}(\T{250});\6
+${}\.{OCR0B}\K\T{\^ff\$U};{}$\6
 \4${}\}{}$\2\6
 \&{else}\5
 ${}\{{}$\1\6
-${}\.{OCR0A}\K\T{\^00};{}$\6
+${}\.{OCR0B}\K\T{\^00\$U};{}$\6
 \4${}\}{}$\2\6
 \4${}\}{}$\2\par
 \fi

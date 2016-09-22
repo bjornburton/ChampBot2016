@@ -94,6 +94,25 @@ DDRB|= (1<<DDB2);
 /*:24*/
 #line 78 "./jafco.w"
 
+/*26:*/
+#line 292 "./jafco.w"
+
+{
+
+
+TCCR0A|= (1<<WGM00);
+TCCR0A|= (1<<COM0A1);
+TCCR0A&= ~(1<<COM0A0);
+TCCR0A|= (1<<COM0B1);
+TCCR0A&= ~(1<<COM0B0);
+
+
+TCCR0B|= (1<<CS01);
+}
+
+/*:26*/
+#line 79 "./jafco.w"
+
 
 /*:6*/
 #line 29 "./jafco.w"
@@ -101,11 +120,11 @@ DDRB|= (1<<DDB2);
 
 
 /*:1*//*7:*/
-#line 84 "./jafco.w"
+#line 85 "./jafco.w"
 
 sei();
 /*:7*//*8:*/
-#line 92 "./jafco.w"
+#line 93 "./jafco.w"
 
 /*34:*/
 #line 374 "./jafco.w"
@@ -117,17 +136,17 @@ MCUCR&= ~(1<<SM0);
 
 
 /*:34*/
-#line 93 "./jafco.w"
+#line 94 "./jafco.w"
 
 
 /*:8*//*9:*/
-#line 100 "./jafco.w"
+#line 101 "./jafco.w"
 
 for(;;)
 {
 
 /*:9*//*10:*/
-#line 106 "./jafco.w"
+#line 107 "./jafco.w"
 
 
 ignCntl(OFF);
@@ -135,11 +154,11 @@ fuelCntl(OFF);
 jawCntl(CLOSE);
 
 /*:10*//*11:*/
-#line 114 "./jafco.w"
+#line 115 "./jafco.w"
 
 sleep_mode();
 /*:11*//*12:*/
-#line 118 "./jafco.w"
+#line 119 "./jafco.w"
 
 
 if(handleIrq!=NULL)
@@ -153,13 +172,13 @@ return 0;
 }
 
 /*:12*//*13:*/
-#line 132 "./jafco.w"
+#line 133 "./jafco.w"
 
 void releaseSeq()
 {
 
 /*:13*//*14:*/
-#line 138 "./jafco.w"
+#line 139 "./jafco.w"
 
 
 jawCntl(OPEN);
@@ -171,7 +190,7 @@ jawCntl(CLOSE);
 
 }
 /*:14*//*15:*/
-#line 151 "./jafco.w"
+#line 152 "./jafco.w"
 
 void fireSeq()
 {
@@ -190,14 +209,14 @@ cooling
 firingState= ready;
 
 /*:15*//*16:*/
-#line 172 "./jafco.w"
+#line 173 "./jafco.w"
 
 
 while(!(PINB&(1<<PB4)))
 {
 
 /*:16*//*17:*/
-#line 179 "./jafco.w"
+#line 180 "./jafco.w"
 
 if(firingState==ready)
 {
@@ -207,7 +226,7 @@ firingState= opened;
 continue;
 }
 /*:17*//*18:*/
-#line 189 "./jafco.w"
+#line 190 "./jafco.w"
 
 if(firingState==opened)
 {
@@ -217,7 +236,7 @@ firingState= igniting;
 continue;
 }
 /*:18*//*19:*/
-#line 199 "./jafco.w"
+#line 200 "./jafco.w"
 
 
 if(firingState==igniting)
@@ -231,12 +250,11 @@ _delay_ms(10);
 }
 
 /*:19*//*20:*/
-#line 213 "./jafco.w"
+#line 214 "./jafco.w"
 
 
 ignCntl(OFF);
 fuelCntl(OFF);
-_delay_ms(5000);
 jawCntl(CLOSE);
 
 }
@@ -292,11 +310,11 @@ void jawCntl(uint8_t state)
 {
 if(state)
 {
-OCR0A= 0xff;
-_delay_ms(200);
-OCR0A= 0xff>>1;
+OCR0A= 0xffU;
+_delay_ms(250);
+OCR0A= 0xccU;
 }
-else{OCR0A= 0x00;}
+else{OCR0A= 0x00U;}
 }
 
 /*:29*//*30:*/
@@ -306,11 +324,11 @@ void fuelCntl(uint8_t state)
 {
 if(state)
 {
-OCR0B= 0xff;
-_delay_ms(200);
-OCR0B= 0xff>>1;
+OCR0B= 0xffU;
+_delay_ms(250);
+OCR0B= 0xffU;
 }
-else{OCR0A= 0x00;}
+else{OCR0B= 0x00U;}
 
 }
 

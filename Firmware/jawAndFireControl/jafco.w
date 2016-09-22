@@ -76,6 +76,7 @@ int main(void)@/
 @<Initialize interrupts@>@/
 @<Initialize pin inputs@>@/
 @<Initialize pin outputs@>@/
+@<Initialize Timer@>@/
 
 @
 Of course, any interrupt function requires that bit ``Global Interrupt Enable''
@@ -185,7 +186,7 @@ while( !(PINB & (1<<PB4)) )
          continue;
         }
       @
-      Ignitor is on.
+      CDI is switched on.
       @c
       if(firingState == opened)
         {@/
@@ -214,7 +215,6 @@ Once the loop fails we set fuel and ignitor off and close the jaw.
 
  ignCntl(OFF);
  fuelCntl(OFF);
- _delay_ms(5000);
  jawCntl(CLOSE);
 
 }
@@ -328,11 +328,11 @@ void jawCntl(uint8_t state)@/
 {@/
   if (state)
    {
-    OCR0A = 0xff;
-    _delay_ms(200);
-    OCR0A = 0xff >> 1;
+    OCR0A = 0xffU;
+    _delay_ms(250);
+    OCR0A = 0xccU;
    }
-   else {OCR0A = 0x00;}
+   else {OCR0A = 0x00U;}
 }
 
 @
@@ -342,11 +342,11 @@ void fuelCntl(uint8_t state)@/
 {@/
   if (state)
    {
-    OCR0B = 0xff;
-    _delay_ms(200);
-    OCR0B = 0xff >> 1;
+    OCR0B = 0xffU;
+    _delay_ms(250);
+    OCR0B = 0xffU;
    }
-   else {OCR0A = 0x00;}
+   else {OCR0B = 0x00U;}
 
 }
 

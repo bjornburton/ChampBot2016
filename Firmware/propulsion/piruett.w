@@ -400,8 +400,8 @@ If execution arrives here, some interrupt has woken it from sleep and some
 vector has possibly run. That possibility is first checked.
 The pointer |handleIrq| will be assigned the value of the responsible
 function and then executed.
-After that the \.{IRQ} is nulled so as to avoid repeating the action, should it
-wake-up for some other reason.
+After that the IRQ is nulled so as to avoid repeating the action, should it
+wakeup for some other reason.
 @c
 
 if (handleIrq != NULL)
@@ -550,11 +550,10 @@ but the numbers here were from trial and error and seem good.
 Until we have collected the edges we will assume there is no signal.
 @c
 
-
 const uint16_t pwcMinIn = 25990UL; // minimum normal value from receiver
 const uint16_t pwcMaxIn = 41850UL; // maximum normal value from receiver
-const int16_t minOut = INT8_MIN;  // minimum value of thrust
-const int16_t maxOut = INT8_MAX;  // maximum value of thrust
+const int16_t minOut = -255;  // minimum value of thrust
+const int16_t maxOut = 255;  // maximum value of thrust
 @
 This is the structure that holds output parameters.
 Track represents the prop-to-prop distance.
@@ -570,14 +569,16 @@ transStruct* pTranslation_s = &(transStruct){
 Here we scale the PWC durations and apply the ``deadBand''.
 @c
 
- {
- int16_t outputCh1;
- int16_t outputCh2;
+{
+int16_t outputCh1;
+int16_t outputCh2;
 
- if (pInput_s->controlMode != IDLE)
-    {
-     outputCh1 = scaler(pInput_s->ch1duration, pwcMinIn, pwcMaxIn, minOut, maxOut);
-     outputCh2 = scaler(pInput_s->ch2duration, pwcMinIn, pwcMaxIn, minOut, maxOut);
+if (pInput_s->controlMode != IDLE)
+   {
+    outputCh1 =
+            scaler(pInput_s->ch1duration, pwcMinIn, pwcMaxIn, minOut, maxOut);
+    outputCh2 =
+            scaler(pInput_s->ch2duration, pwcMinIn, pwcMaxIn, minOut, maxOut);
     }
   else
      {
@@ -937,8 +938,8 @@ int16_t difference;
 int16_t piruett;
 static int8_t lock = OFF;
 const int8_t pirLockLevel = 15;
-const int16_t max = (MAX_DUTYCYCLE * UINT8_MAX)/100;
-const int16_t ampFact = 128;
+const int16_t max = (MAX_DUTYCYCLE * UINT8_MAX)/100L;
+const int16_t ampFact = 128L;
 
 
 @
