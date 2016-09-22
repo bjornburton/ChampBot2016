@@ -473,17 +473,16 @@ void thrustCalc(inputStruct*pInput_s)
 #line 551 "./piruett.w"
 
 
-
 const uint16_t pwcMinIn= 25990UL;
 const uint16_t pwcMaxIn= 41850UL;
-const int16_t minOut= -255;
-const int16_t maxOut= 255;
+const int16_t minOut= -255L;
+const int16_t maxOut= 255L;
 /*:34*//*35:*/
 #line 563 "./piruett.w"
 
 transStruct*pTranslation_s= &(transStruct){
 .deadBand= 10,
-.track= 520
+.track= 240
 };
 
 /*:35*//*36:*/

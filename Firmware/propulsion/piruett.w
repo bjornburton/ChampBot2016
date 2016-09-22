@@ -552,17 +552,18 @@ Until we have collected the edges we will assume there is no signal.
 
 const uint16_t pwcMinIn = 25990UL; // minimum normal value from receiver
 const uint16_t pwcMaxIn = 41850UL; // maximum normal value from receiver
-const int16_t minOut = -255;  // minimum value of thrust
-const int16_t maxOut = 255;  // maximum value of thrust
+const int16_t minOut = -255L;  // minimum value of thrust
+const int16_t maxOut = 255L;  // maximum value of thrust
 @
 This is the structure that holds output parameters.
 Track represents the prop-to-prop distance.
 The units really don't mean anything physical.
-It should probably be adjusted to minimize turn radius. With the Flysky this value is pretty large at 520.
+It should probably be adjusted to minimize turn radius.
+With the Flysky this value is about 240.
 @c
 transStruct* pTranslation_s = &(transStruct){
     @[@].deadBand = 10,
-    @[@].track = 520
+    @[@].track = 240
     };
 
 @
